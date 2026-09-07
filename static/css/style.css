@@ -193,6 +193,119 @@ h1, h2, h3, .brand {
     border-top: 1px solid var(--line);
 }
 
+/* ==========================================================================
+   FOCUS AREAS
+   Section baru untuk Individual Assignment 1.
+   Tiga bidang yang sedang saya pelajari, ditulis sebagai daftar <ul>
+   karena ketiganya item sejajar - bukan konten yang berdiri sendiri.
+   Layout: CSS Grid tiga kolom sama lebar.
+   ========================================================================== */
+
+.focus {
+    padding: 5rem 0;
+}
+
+/* --- Kepala section: judul + subjudul, rata tengah.
+       Nama kelasnya sengaja generik (.section-head, bukan .focus-head)
+       supaya bisa dipakai ulang oleh section "Recent Work" nanti. --- */
+.section-head {
+    max-width: 540px;
+    margin: 0 auto 3.5rem;
+    text-align: center;
+}
+
+.section-head h2 {
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+}
+
+.section-sub {
+    color: var(--text-muted);
+}
+
+/* --- Grid tiga kolom sama lebar --- */
+.focus-grid {
+    list-style: none;                     /* hapus bullet bawaan <ul> */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+}
+
+/* --- Satu kartu focus area --- */
+.focus-card {
+    padding: 1.75rem 1rem;
+    text-align: center;
+    border-radius: var(--radius);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Kartu terangkat sedikit saat disentuh kursor, dengan bayangan
+   bernuansa rose supaya menyatu dengan palet halaman. */
+.focus-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 28px rgba(160, 90, 118, 0.12);
+}
+
+/* --- Ikon.
+       Lingkaran pink sudah menyatu di dalam berkas PNG-nya,
+       jadi di sini cukup mengatur ukuran - tidak perlu border-radius. --- */
+.focus-icon {
+    display: block;
+    width: 132px;
+    height: 132px;
+    margin: 0 auto 1.25rem;
+    object-fit: contain;
+    transition: transform 0.25s ease;
+}
+
+.focus-card:hover .focus-icon {
+    transform: scale(1.06);
+}
+
+/* --- Teks kartu --- */
+.focus-card h3 {
+    font-size: 1.35rem;
+    margin-bottom: 0.5rem;
+}
+
+.focus-card p {
+    max-width: 26ch;        /* jaga deskripsi tetap sekitar 2 baris, seperti di design */
+    margin: 0 auto;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.65;
+}
+
+/* ==========================================================================
+   RESPONSIF - TABLET
+   Grid tiga kolom mulai terlalu sempit di bawah ~820px: tiap kolom hanya
+   tersisa sekitar 170px sementara ikonnya sendiri sudah 132px, sehingga
+   deskripsi pecah menjadi banyak baris pendek. Karena itu grid langsung
+   diturunkan menjadi satu kolom, bukan dua - tiga item ganjil akan
+   menyisakan satu kartu menggantung kalau dipaksa dua kolom.
+   ========================================================================== */
+
+@media (max-width: 820px) {
+    .focus {
+        padding: 3.5rem 0;
+    }
+
+    .section-head {
+        margin-bottom: 2.5rem;
+    }
+
+    .focus-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .focus-icon {
+        width: 112px;
+        height: 112px;
+    }
+}
+
 @media (max-width: 600px) {
     .hero-grid {
         grid-template-columns: 1fr;
@@ -208,5 +321,26 @@ h1, h2, h3, .brand {
 
     .social-links {
         justify-content: flex-start;
+    }
+}
+
+/* ==========================================================================
+   AKSESIBILITAS
+   Sebagian pengguna mengaktifkan setelan "kurangi animasi" di sistem operasi
+   karena gerakan berlebih dapat memicu pusing atau mual. Media query ini
+   menghormati setelan tersebut dengan mematikan seluruh transisi dan
+   pergerakan hover, tanpa menghilangkan fungsinya.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .focus-card,
+    .focus-icon,
+    .social-link {
+        transition: none;
+    }
+
+    .focus-card:hover,
+    .focus-card:hover .focus-icon {
+        transform: none;
     }
 }
