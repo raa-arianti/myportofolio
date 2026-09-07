@@ -5,24 +5,41 @@
 }
 
 :root {
-    --ink: #1c1917;
-    --paper: #faf6f0;
-    --accent: #d95d39;
-    --accent-dark: #a8442a;
-    --line: #e3d9c9;
-    --text-muted: #6b6459;
-    --radius: 4px;
+    /* ===== PALET WARNA ===== */
+    --ink: #1a1a1a;            /* judul & teks utama */
+    --paper: #ffffff;          /* latar halaman */
+    --accent: #f9dce5;         /* pink lembut - strip kartu & lingkaran ikon */
+    --accent-dark: #a05a76;    /* rose pekat - teks aksen & hover */
+    --line: #ece7e4;           /* garis pemisah halus */
+    --text-muted: #6f6b68;     /* deskripsi & teks sekunder */
+
+    /* ===== BENTUK ===== */
+    --radius: 12px;            /* sudut membulat kartu */
+    --radius-sm: 8px;
+
+    /* ===== TIPOGRAFI ===== */
+    --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+    --font-body: "Lora", Georgia, "Times New Roman", serif;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* ===== ASSET SLOTS =====
+       Semua gambar dekoratif dikumpulkan di satu tempat supaya mudah diganti:
+       cukup ubah nama berkas di baris ini, tanpa menyentuh HTML sama sekali.
+       Dipakai mulai section Hero dan Footer. */
+    --img-hero-tiles:   url("/static/img/background-gradiasi.png");
+    --img-hero-clouds:  url("/static/img/awan.png");
+    --img-footer-scene: url("/static/img/footer.png");
 }
 
 body {
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-body);
     color: var(--ink);
     background-color: var(--paper);
     line-height: 1.6;
 }
 
-h1, .brand {
-    font-family: "Space Grotesk", -apple-system, sans-serif;
+h1, h2, h3, .brand {
+    font-family: var(--font-display);
 }
 
 .container {
@@ -138,7 +155,7 @@ h1, .brand {
 }
 
 .social-link:hover {
-    background-color: var(--accent);
+    background-color: var(--accent-dark);
 }
 
 .hero-photo {
