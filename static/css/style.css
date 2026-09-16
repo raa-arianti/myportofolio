@@ -729,12 +729,26 @@ html {
     margin-top: 2rem;
 }
 
-/* --- Tombol kecil di pojok kanan atas kartu. .work-card sudah
-       position: relative, jadi tombol ini menempel pada kartunya. --- */
-.card-action {
+/* --- Tombol Edit dan Delete milik pemilik. Di kartu proyek, kelompoknya menempel di
+       pojok kanan atas (.work-card sudah position: relative). Di kartu experience yang
+       berupa teks, kelompoknya ikut alur biasa di bagian bawah kartu. --- */
+.card-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.work-card .card-actions {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
+}
+
+.experience-card .card-actions {
+    margin-top: 1rem;
+}
+
+.card-action {
+    display: inline-block;
     padding: 0.35rem 0.85rem;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -746,11 +760,22 @@ html {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
+.card-action {
+    text-decoration: none;
+    line-height: 1.2;
+}
+
 .card-action:hover,
 .card-action:focus-visible {
+    background-color: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: var(--paper);
+}
+
+.card-action-danger:hover,
+.card-action-danger:focus-visible {
     background-color: #b42318;
     border-color: #b42318;
-    color: var(--paper);
 }
 
 /* --- Dialog konfirmasi hapus. Elemen popover tampil di "top layer" browser,

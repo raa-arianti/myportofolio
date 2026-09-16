@@ -59,6 +59,17 @@ def show_projects(request):
     return render(request, "projects.html", context)
 
 
+def render_entry_form(request, form, *, page_title, submit_label, cancel_url_name):
+    """Satu halaman form untuk semua aksi tambah dan ubah data (proyek maupun experience)."""
+    context = {
+        "form": form,
+        "page_title": page_title,
+        "submit_label": submit_label,
+        "cancel_url": reverse(cancel_url_name),
+    }
+    return render(request, "entry_form.html", context)
+
+
 @owner_required
 def create_project(request):
     form = ProjectForm(request.POST or None)
@@ -67,13 +78,33 @@ def create_project(request):
         messages.success(request, "Project added successfully.")
         return redirect("main:show_projects")
 
-    context = {
-        "form": form,
-        "page_title": "Add Project",
-        "submit_label": "Add project",
-        "cancel_url": reverse("main:show_projects"),
-    }
-    return render(request, "projects_form.html", context)
+    return render_entry_form(
+        request,
+        form,
+        page_title="Add Project",
+        submit_label="Add project",
+        cancel_url_name="main:show_projects",
+    )
+
+
+@owner_required
+def edit_project(request, project_id):
+    """Form ubah = form tambah yang diisi data lama lewat instance=project, lalu
+    form.save() memperbarui baris yang sama, bukan membuat baris baru."""
+    project = get_object_or_404(Project, pk=project_id)
+    form = ProjectForm(request.POST or None, instance=project)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"{project.title} was updated.")
+        return redirect("main:show_projects")
+
+    return render_entry_form(
+        request,
+        form,
+        page_title="Edit Project",
+        submit_label="Save changes",
+        cancel_url_name="main:show_projects",
+    )
 
 
 @owner_required

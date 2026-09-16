@@ -103,7 +103,7 @@ class ProjectFormAndApiTest(TestCase):
     def test_create_page_renders_form_with_csrf_token(self):
         response = self.client.get(self.create_url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "projects_form.html")
+        self.assertTemplateUsed(response, "entry_form.html")
         self.assertContains(response, "csrfmiddlewaretoken")
 
     def test_create_project_with_valid_data(self):
