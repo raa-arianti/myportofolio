@@ -228,3 +228,108 @@ class OwnerLockDisabledTest(TestCase):
         self.assertRedirects(
             self.client.get(reverse("main:owner_login")), reverse("main:show_projects")
         )
+
+
+class ExperienceCrudTest(TestCase):
+    """Tugas 3: ExperienceForm, JSON experience, serta tambah, ubah, dan hapus experience."""
+
+    def setUp(self):
+        self.ongoing = Experience.objects.create(
+            title="Staff of Community Service Department",
+            description="Leading an outreach program.",
+            category="volunteer",
+        )
+        self.finished = Experience.objects.create(
+            title="UI/UX Design Intern",
+            description="Designed learning interfaces.",
+            category="internship",
+            ended_at=timezone.make_aware(timezone.datetime(2025, 11, 30)),
+        )
+
+    def test_experience_json_lists_ongoing_first(self):
+        response = self.client.get(reverse("main:get_experience_json"))
+        self.assertEqual(response["Content-Type"], "application/json")
+        titles = [item["fields"]["title"] for item in json.loads(response.content)]
+        self.assertEqual(titles, [self.ongoing.title, self.finished.title])
+
+    def test_experience_page_shows_deserialized_data(self):
+        response = self.client.get(reverse("main:show_experience"))
+        self.assertContains(response, self.ongoing.title)
+        self.assertContains(response, "Selesai &middot; Nov 2025")
+
+    def test_create_experience(self):
+        response = self.client.post(
+            reverse("main:create_experience"),
+            {
+                "title": "Programming & AI Intern",
+                "description": "Worked with ROS2 and PX4.",
+                "category": "internship",
+                "thumbnail": "",
+                "ended_at": "2026-02-28",
+            },
+        )
+        self.assertRedirects(response, reverse("main:show_experience"))
+        created = Experience.objects.get(title="Programming & AI Intern")
+        self.assertFalse(created.is_ongoing)
+
+    def test_create_experience_rejects_unknown_category(self):
+        response = self.client.post(
+            reverse("main:create_experience"),
+            {"title": "X", "description": "Y", "category": "hobby", "thumbnail": "", "ended_at": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Experience.objects.filter(title="X").exists())
+
+    def test_edit_page_is_prefilled(self):
+        response = self.client.get(reverse("main:edit_experience", args=[self.finished.id]))
+        self.assertTemplateUsed(response, "entry_form.html")
+        self.assertContains(response, 'value="UI/UX Design Intern"')
+        self.assertContains(response, 'value="2025-11-30"')
+
+    def test_edit_experience_updates_same_row(self):
+        url = reverse("main:edit_experience", args=[self.ongoing.id])
+        self.client.post(
+            url,
+            {
+                "title": "Staff of Community Service",
+                "description": "Updated.",
+                "category": "volunteer",
+                "thumbnail": "",
+                "ended_at": "2026-12-31",
+            },
+        )
+        self.ongoing.refresh_from_db()
+        self.assertEqual(self.ongoing.title, "Staff of Community Service")
+        self.assertFalse(self.ongoing.is_ongoing)
+        self.assertEqual(Experience.objects.count(), 2)
+
+    def test_delete_experience_only_on_post(self):
+        url = reverse("main:delete_experience", args=[self.finished.id])
+        self.client.get(url)
+        self.assertTrue(Experience.objects.filter(pk=self.finished.id).exists())
+        self.client.post(url)
+        self.assertFalse(Experience.objects.filter(pk=self.finished.id).exists())
+
+    def test_edit_project_updates_same_row(self):
+        project = Project.objects.create(
+            title="Sortify", description="Old.", thumbnail="sortify-card.png"
+        )
+        self.client.post(
+            reverse("main:edit_project", args=[project.id]),
+            {"title": "Sortify v2", "description": "New.", "thumbnail": "sortify-card.png"},
+        )
+        project.refresh_from_db()
+        self.assertEqual(project.title, "Sortify v2")
+        self.assertEqual(Project.objects.count(), 1)
+
+    @override_settings(OWNER_SECRET="test-owner-secret")
+    def test_experience_forms_are_owner_only(self):
+        urls = [
+            reverse("main:create_experience"),
+            reverse("main:edit_experience", args=[self.ongoing.id]),
+            reverse("main:delete_experience", args=[self.ongoing.id]),
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.post(url).status_code, 403)
+        self.assertEqual(Experience.objects.count(), 2)
