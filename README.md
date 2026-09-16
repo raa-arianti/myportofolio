@@ -18,21 +18,26 @@ Semester Gasal 2026/2027.
 
 ## Tentang Proyek
 
-Sebuah halaman portofolio satu halaman yang memperkenalkan diri saya, bidang yang
-sedang saya pelajari, dan proyek-proyek yang pernah saya kerjakan. Sampai tahap ini
-halaman masih sepenuhnya statis, belum menggunakan basis data maupun arsitektur MVT.
+Website portofolio pribadi yang memperkenalkan diri saya, bidang yang sedang saya
+pelajari, pengalaman, dan proyek yang pernah saya kerjakan. Sejak Tutorial 02, data
+yang sebelumnya ditulis langsung di HTML mulai dipindahkan ke basis data dengan
+arsitektur Model-View-Template (MVT) Django.
 
-Halaman terdiri atas tiga bagian utama:
+Website terdiri atas tiga halaman:
 
-1. **About Me**, berisi foto, nama, NPM, dan bio singkat.
-2. **Focus Areas**, berisi tiga bidang yang sedang saya dalami, disusun sebagai daftar.
-3. **Recent Work**, berisi tiga proyek yang pernah saya kerjakan, disusun sebagai kartu.
+| Halaman | URL | Isi |
+|---|---|---|
+| Home | `/` | hero dengan data profil dari context view, Focus Areas, dan Recent Work |
+| Experience | `/experience/` | daftar pengalaman dari model `Experience` |
+| Projects | `/projects/` | daftar proyek dari model `Project` |
 
 ## Teknologi
 
-- Python 3.13 dan Django 6.1
-- HTML5 semantik serta CSS3 (custom properties, Flexbox, CSS Grid, media query)
-- Google Fonts: Playfair Display dan Lora
+- Python 3.13 dan Django 5.2 (LTS, menyesuaikan dukungan PostgreSQL di PWS)
+- SQLite untuk pengembangan lokal, PostgreSQL di PWS
+- HTML5 semantik, CSS3 (custom properties, Flexbox, CSS Grid, media query,
+  pseudo-element), dan Django Template Language
+- Google Fonts: Playfair Display, Source Serif 4, dan Libre Baskerville
 - Deployment: Pacil Web Service (PWS) dengan Gunicorn dan WhiteNoise
 
 ## Struktur Proyek
@@ -40,13 +45,20 @@ Halaman terdiri atas tiga bagian utama:
 myportofolio/
 ├── manage.py
 ├── requirements.txt
-├── portofolio/              # konfigurasi Django (settings, urls, wsgi)
-├── main/                    # aplikasi utama, berisi views.py
+├── portofolio/              # konfigurasi Django (settings, urls proyek, wsgi)
+├── main/                    # aplikasi utama
+│   ├── models.py            # model Experience dan Project
+│   ├── views.py             # show_main, show_experience, show_projects
+│   ├── urls.py              # named route aplikasi (namespace "main")
+│   ├── tests.py             # unit test tiap halaman
+│   └── migrations/          # riwayat perubahan skema basis data
 ├── templates/
-│   └── index.html           # seluruh halaman portofolio
+│   ├── index.html           # halaman utama
+│   ├── experience.html      # daftar pengalaman
+│   └── projects.html        # daftar proyek
 └── static/
     ├── css/style.css        # seluruh gaya halaman
-    └── img/                 # foto, ikon, dan pratinjau proyek
+    └── img/                 # foto, ilustrasi cat air, ikon, dan gambar proyek
 </pre>
 
 ## Menjalankan Secara Lokal
@@ -70,9 +82,15 @@ pip install -r requirements.txt
 # 5. Jalankan migrasi dan server
 python manage.py migrate
 python manage.py runserver
+
+# 6. Jalankan unit test (matikan server dulu dengan Ctrl+C)
+python manage.py test main
 ```
 
 Halaman dapat diakses di http://localhost:8000/
+
+Halaman Experience dan Projects akan menampilkan pesan kosong sampai datanya
+ditambahkan, misalnya lewat `python manage.py shell`.
 
 ---
 
@@ -92,6 +110,22 @@ dan **Recent Work**, keduanya responsif dengan efek hover tersendiri.
 
 **Rencana iterasi berikutnya:** memperbarui hero, navbar, dan footer agar sesuai
 rancangan visual penuh, serta memindahkan data proyek dari HTML ke basis data.
+
+### Tutorial 02, Model-View-Template
+Membuat model `Experience`, memindahkan data profil dari HTML ke context view, membuat
+halaman `/experience/` dengan perulangan dan tampilan kondisi kosong, mengatur routing
+lewat `main/urls.py`, dan menulis enam unit test pertama.
+
+### Redesain home page (lanjutan Tugas 1)
+Menyelesaikan rencana iterasi dari Tugas 1: navbar berbentuk kapsul, hero dengan gradasi
+dan awan cat air, footer dengan lukisan cat air, serta tipografi yang dicocokkan dengan
+rancangan Figma. Sekaligus memperbaiki bug CSS responsif Recent Work dari Tugas 1 yang
+ternyata tidak pernah aktif, karena aturannya tertulis bersarang di dalam selektor lain.
+
+### Tugas 2, Halaman proyek berbasis model
+Menambahkan model `Project`, halaman `/projects/` berisi kartu proyek dari basis data
+dengan tampilan kondisi kosong, tautan navbar dengan `{% url %}`, grid kartu responsif
+tanpa media query, dan empat unit test baru.
 
 ---
 
@@ -203,6 +237,93 @@ Fungsionalitas dinamis yang paling ingin saya siapkan berikutnya, berurutan:
 4. **Formulir kontak** yang benar-benar mengirim pesan, melibatkan penanganan POST,
    CSRF token, dan validasi, hal-hal yang mustahil dilakukan dengan HTML dan CSS saja.
 
+### Tugas 2
+
+**1. Jelaskan alur yang terjadi ketika pengguna membuka halaman portofolio baru, mulai dari permintaan yang diterima proyek hingga data ditampilkan pada browser. Dalam jawabanmu, jelaskan peran `urls.py` proyek, `urls.py` aplikasi, view, model, dan template.**
+
+Saya ambil contoh saat pengguna membuka `/projects/`.
+
+1. **`portofolio/urls.py` (URL proyek)** menerima permintaan pertama kali. Isinya
+   `path("", include("main.urls"))`, jadi ia tidak memilih view sama sekali. Tugasnya hanya
+   meneruskan permintaan ke aplikasi `main`.
+2. **`main/urls.py` (URL aplikasi)** mencocokkan sisa alamat `projects/` dengan
+   `path("projects/", show_projects, name="show_projects")`. Nama rute ini yang saya pakai
+   di navbar lewat `{% url 'main:show_projects' %}` dan di unit test lewat `reverse()`.
+3. **View `show_projects`** memanggil model lewat `Project.objects.all()`.
+4. **Model `Project`** menerjemahkan panggilan itu menjadi query SQL ke basis data (SQLite
+   di laptop, PostgreSQL di PWS) dan mengembalikan QuerySet. Urutannya sudah ditentukan
+   `ordering = ["created_at"]` di `Meta` model, jadi view tidak perlu mengurutkan sendiri.
+5. View lalu menyusun **context** berisi `project_list`, `name`, dan `brand_name`, lalu
+   memanggil `render()` dengan template `projects.html`.
+6. **Template** mengulang `{% for project in project_list %}` untuk membuat satu kartu per
+   proyek, atau menjalankan `{% empty %}` kalau datanya kosong. Hasilnya berupa HTML utuh
+   yang dikirim sebagai respons.
+7. Setelah HTML diterima, browser **meminta lagi** berkas CSS dan setiap gambar kartu ke
+   `/static/...`. Permintaan ini dilayani terpisah sebagai berkas statis, tidak melewati
+   view.
+
+Yang paling membantu saya memahami alur ini adalah pesan error saat halaman belum
+lengkap. Setelah route dan view dibuat tetapi template belum ada, membuka `/projects/`
+memunculkan `TemplateDoesNotExist` dari baris `render()` di `views.py`. Artinya
+permintaan sudah berhasil melewati kedua `urls.py` dan masuk ke view, dan baru berhenti
+di tahap template.
+
+**2. Mengapa data untuk bagian portofolio baru sebaiknya disimpan pada model dan tidak ditulis langsung di dalam template? Jelaskan dampaknya terhadap kemudahan pemeliharaan dan pengembangan aplikasi.**
+
+Proyek saya sendiri menunjukkan perbedaannya dengan jelas. Section **Recent Work** di home
+masih berupa tiga blok `<article>` yang saya tulis manual, sedangkan halaman **Projects**
+menampilkan enam kartu dari **satu blok HTML** yang diulang oleh `{% for %}`.
+
+Dampaknya terhadap pemeliharaan:
+
+- **Menambah atau mengubah data tidak menyentuh kode tampilan.** Proyek ketujuh cukup satu
+  `Project.objects.create(...)`. Dengan cara Recent Work, saya harus menyalin satu
+  `<article>` lagi dan berhati-hati agar strukturnya tidak berbeda dari kartu lain.
+- **Ada satu sumber kebenaran.** Data yang ditulis di dua tempat pasti suatu saat tidak
+  sinkron. Karena itu Recent Work saya rencanakan untuk mengambil data dari model `Project`
+  yang sama, bukan ditulis ulang.
+- **Tampilan dan data bisa diubah terpisah.** Waktu saya mengatur grid kartu, saya hanya
+  menyentuh CSS dan template, tanpa khawatir ada judul proyek yang ikut terhapus.
+
+Dampaknya terhadap pengembangan:
+
+- **Data bisa diurutkan dan disaring.** Rancangan saya punya dropdown filter "All". Dengan
+  model, itu cukup menambah satu field kategori dan menyaring QuerySet. Dengan HTML
+  statis, filter semacam itu tidak mungkin tanpa JavaScript.
+- **Setiap proyek bisa punya halaman detail** berdasarkan `id`-nya, tanpa membuat satu file
+  HTML per proyek.
+- **Perilakunya bisa diuji.** Unit test saya membuat data palsu, lalu memastikan data itu
+  muncul dan pesan kosong muncul saat datanya dihapus. Data yang ditulis mati di HTML
+  tidak bisa diuji dengan cara ini.
+
+Di pertanyaan reflektif Tugas 1, saya menulis bahwa langkah berikutnya adalah "Model Django
+untuk `Project`". Setelah benar-benar mengerjakannya, perbedaan yang paling terasa adalah
+HTML-nya menjadi lebih pendek sementara isinya bertambah dua kali lipat.
+
+**3. Apa perbedaan fungsi `makemigrations` dan `migrate` pada Django? Berikan contoh perubahan model yang mengharuskanmu menjalankan kedua perintah tersebut.**
+
+| | `makemigrations` | `migrate` |
+|---|---|---|
+| Yang dilakukan | membandingkan `models.py` dengan migrasi terakhir, lalu **menulis berkas instruksi** perubahan | **menjalankan** instruksi itu ke basis data |
+| Menyentuh basis data? | tidak | ya |
+| Hasilnya | berkas baru di `main/migrations/` | tabel atau kolom berubah, dan Django mencatat migrasi mana yang sudah diterapkan |
+
+Contoh dari Tugas 2: setelah menambahkan `class Project` di `models.py`, `makemigrations`
+membuat berkas `main/migrations/0002_project.py` berisi instruksi `Create model Project`.
+Pada tahap itu tabelnya belum ada. Baru setelah `migrate`, tabel `Project` benar-benar
+dibuat di `db.sqlite3`. Contoh perubahan lain yang juga membutuhkan kedua perintah itu
+adalah menambahkan field `category` ke `Project` untuk dropdown filter di rancangan saya.
+
+Dua hal yang saya pelajari dari pemisahan ini:
+
+- **Berkas migrasi wajib di-commit.** `db.sqlite3` tidak ikut ke repositori, jadi PWS
+  membuat tabelnya sendiri di PostgreSQL dengan menjalankan migrasi dari berkas yang ada di
+  repositori. Tanpa `0002_project.py`, tabel `Project` tidak pernah dibuat di PWS dan
+  halaman `/projects/` akan error di sana walaupun lancar di laptop.
+- **Menambah data tidak membutuhkan migrasi.** Enam proyek yang saya masukkan lewat
+  `python manage.py shell` hanya mengisi tabel yang strukturnya sudah ada, jadi tidak perlu
+  `makemigrations` maupun `migrate`.
+
 ---
 
 ## Penggunaan AI (AI Disclosure)
@@ -210,11 +331,13 @@ Fungsionalitas dinamis yang paling ingin saya siapkan berikutnya, berurutan:
 Saya **menggunakan bantuan AI** dalam mengerjakan tugas ini, dan berikut rinciannya
 selengkap yang saya bisa.
 
-### Tools
+### Tugas 1
+
+#### Tools
 
 **Claude (model Opus 5) melalui Claude Code**, sesi tunggal pada 7 September 2026.
 
-### Strategi prompting
+#### Strategi prompting
 
 Saya tidak meminta AI membuatkan seluruh website. Sebelum mulai, saya menetapkan aturan
 kerja eksplisit lewat prompt berikut:
@@ -242,7 +365,7 @@ potongan dan mengujinya sebelum lanjut, saya tahu persis apa yang masuk ke proye
 dan kenapa. Larangan "jangan redesign" saya tambahkan karena rancangan visualnya sudah
 saya buat sendiri lebih dulu, dan saya ingin AI mengikutinya, bukan menggantinya.
 
-### Bagian yang dibantu AI
+#### Bagian yang dibantu AI
 
 - Menerjemahkan rancangan visual saya menjadi struktur HTML dan aturan CSS.
 - Menjelaskan alasan di balik tiap teknik (`grid-template-areas`, `object-fit`,
@@ -251,7 +374,7 @@ saya buat sendiri lebih dulu, dan saya ingin AI mengikutinya, bukan menggantinya
   yang tepat.
 - Menyusun komentar kode dan draf awal dokumentasi ini.
 
-### Bagian yang saya kerjakan sendiri
+#### Bagian yang saya kerjakan sendiri
 
 - **Seluruh rancangan visual** (palet, tipografi, tata letak, komposisi tiap section)
   dibuat sebelum AI dilibatkan sama sekali.
@@ -261,7 +384,7 @@ saya buat sendiri lebih dulu, dan saya ingin AI mengikutinya, bukan menggantinya
 - Mengambil keputusan akhir, termasuk keputusan berhenti menambah fitur dan
   memprioritaskan dokumentasi menjelang tenggat.
 
-### Analisis kritis: keterbatasan AI yang saya temukan
+#### Analisis kritis: keterbatasan AI yang saya temukan
 
 Bagian ini yang menurut saya paling berharga dari proses kerja tadi.
 
@@ -291,7 +414,7 @@ hero berupa kolase tegel bunga. Setelah berkasnya dibuka, isinya ternyata gradas
 Ini menegaskan pola yang sama, bahwa kesimpulan dari gambar perlu diverifikasi ke sumber
 aslinya.
 
-### Perbaikan manual yang saya lakukan
+#### Perbaikan manual yang saya lakukan
 
 - Mengoreksi warna pink ke `#FFE8EF` setelah memeriksa berkas rancangan saya.
 - Mengoreksi struktur kartu proyek menjadi lapisan transparan di atas gambar, setelah
@@ -303,3 +426,75 @@ kode, tetapi ia bekerja dari tebakan atas apa yang saya maksud. Yang menjaga has
 tetap benar adalah saya sendiri, dengan menguji tiap langkah, membandingkannya dengan
 rancangan asli, dan berani mengatakan bahwa sesuatu belum sesuai alih-alih menerima
 hasil yang kelihatannya sudah rapi.
+
+### Tugas 2 dan redesain home page
+
+#### Tools
+
+**Claude (model Opus 5) melalui Claude Code** di aplikasi desktop, dalam satu percakapan
+berkelanjutan pada 9, 14, dan 16 September 2026. Percakapan ini mencakup Tutorial 02,
+redesain home page, dan Tugas 2.
+
+#### Strategi prompting
+
+Saya memakai aturan kerja yang sama dengan Tugas 1: AI tidak boleh mengubah berkas
+proyek, saya yang mengetik setiap potongan kode, dan pekerjaan dibagi per section
+dengan tahap analisis, HTML, CSS, lalu responsif. Saya juga meminta AI **memeriksa
+hasil pekerjaan saya setelah tiap langkah**, bukan hanya memberi kode, sehingga setiap
+tahap ditutup dengan pengecekan berkas, unit test, atau pengukuran halaman di browser.
+
+Satu pengecualian saya berikan secara eksplisit di akhir: AI boleh langsung menyunting
+`README.md` untuk memperbarui bagian dokumentasi yang sudah basi dan menyusun draf
+bagian AI disclosure ini. Atas permintaan saya, AI juga menyusun draf jawaban
+pertanyaan reflektif Tugas 2 berdasarkan kode proyek saya. Draf itu saya baca,
+sunting, dan pastikan saya pahami sebelum saya masukkan ke README.
+
+#### Bagian yang dibantu AI
+
+- Menjelaskan konsep dan menyusun potongan kode untuk model `Project`, view, route,
+  template, unit test, serta CSS navbar, footer, hero, dan halaman proyek.
+- Memeriksa berkas saya setelah tiap langkah, termasuk menemukan blok footer yang tidak
+  sengaja tertempel di tengah hero dan menimpa sebagian markup-nya.
+- Mengukur tata letak di beberapa lebar layar langsung di browser untuk menentukan
+  breakpoint hero di 960px, dan menguji CSS serta unit test lebih dulu (lewat gaya
+  sementara di browser dan salinan proyek terpisah) sebelum kodenya diberikan kepada saya.
+- Mengukur piksel transparan pada `footer.png` dan `awan.png` untuk menentukan posisi
+  lukisan footer dan pita awan di hero.
+- Menemukan bug CSS dari Tugas 1: aturan responsif Recent Work tertulis bersarang di dalam
+  `.focus` dan `.hero-grid`, sehingga dibaca sebagai selektor keturunan dan tidak pernah
+  cocok dengan elemen apa pun.
+- Memperbarui bagian README yang basi dan menyusun draf bagian AI disclosure ini.
+- Menyusun draf jawaban pertanyaan reflektif Tugas 2 dengan contoh dari kode proyek saya.
+
+#### Bagian yang saya kerjakan sendiri
+
+- Seluruh rancangan visual di Figma, termasuk halaman All Project, serta mengekspor
+  keenam gambar kartu proyek dengan ukuran seragam.
+- Mengetik dan menempel seluruh kode aplikasi, menjalankan migrasi, mengisi data lewat
+  shell, menjalankan test, commit, merge, dan deploy.
+- Memeriksa tampilan di browser setelah tiap langkah dan memutuskan kapan hasilnya sudah
+  sesuai rancangan.
+- Menyunting draf jawaban pertanyaan reflektif Tugas 2 dan memastikan setiap
+  penjelasannya cocok dengan kode yang saya ketik sendiri.
+- Menentukan prioritas, misalnya menyelesaikan home page lebih dulu karena tugas-tugas
+  berikutnya dibangun di atasnya, serta menunda pencocokan font dan warna ke sesi lain.
+
+#### Keterbatasan AI yang saya temukan
+
+**1. Salah hitung, lalu salah membaca maksud rancangan di footer.** Ruang di bawah teks
+footer awalnya dihitung dari tinggi semak di sisi kiri lukisan, padahal teks berada tepat
+di atas menara di tengah. Ketika menara itu menembus teks, AI menganggapnya kesalahan dan
+menjauhkan teks dari menara, sehingga muncul ruang kosong besar. Padahal menara yang
+menembus teks copyright memang konsep rancangan saya. Setelah saya jelaskan, AI mengukur
+ulang rancangan dan mengganti pendekatannya menjadi jarak atas dalam persen.
+
+**2. Detail rancangan terlewat dari tangkapan layar yang kecil.** Kepala pada foto hero
+sengaja menyembul melewati tepi atas kartu, tetapi hal ini baru disadari AI setelah saya
+mengirim tangkapan layar Figma yang lebih dekat. Kalau tidak, kartunya akan dibuat
+memotong foto.
+
+**3. Beberapa nilai masih asumsi dan belum diverifikasi ke Figma.** Font untuk navbar,
+subjudul section, deskripsi kartu, dan footer, serta warna kartu foto (`#f3f1f1`), masih
+berupa asumsi. Warna kartu sengaja ditaruh sebagai token dengan komentar "SEMENTARA" agar
+mudah diganti. Deskripsi kartu proyek juga masih sans-serif, padahal di rancangan tampak
+serif. Saya mencatat ini sebagai pekerjaan yang belum selesai, bukan keputusan desain.
