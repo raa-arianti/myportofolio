@@ -554,6 +554,131 @@ html {
 }
 
 /* ==========================================================================
+   TOMBOL, FORM, DAN PESAN
+   Mulai Tutorial 03. Tombol memakai --accent-dark, bukan --accent, karena pink
+   --accent terlalu pucat untuk teks putih.
+   ========================================================================== */
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--accent-dark);
+    border-radius: 999px;
+    background-color: var(--accent-dark);
+    color: var(--paper);
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.button:hover {
+    background-color: var(--ink);
+    border-color: var(--ink);
+}
+
+.button-secondary {
+    background-color: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.button-secondary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--ink);
+}
+
+.button-danger {
+    background-color: #b42318;
+    border-color: #b42318;
+}
+
+.button-danger:hover {
+    background-color: #8f1c13;
+    border-color: #8f1c13;
+}
+
+.projects-add {
+    margin-top: 1.5rem;
+}
+
+.flash-messages {
+    margin-top: 1rem;
+}
+
+.flash {
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius);
+    background-color: var(--accent);
+    text-align: center;
+}
+
+.form-section {
+    padding: 4rem 0 5rem;
+}
+
+.form-container {
+    max-width: 40rem;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background-color: var(--paper);
+    color: var(--ink);
+    font: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: 2px solid var(--accent-dark);
+    outline-offset: 1px;
+    border-color: var(--accent-dark);
+}
+
+.form-help,
+.form-error {
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+}
+
+.form-help {
+    color: var(--text-muted);
+}
+
+.form-error {
+    color: #b42318;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
+/* ==========================================================================
    RESPONSIF - TABLET
    Grid tiga kolom mulai terlalu sempit di bawah ~820px: tiap kolom hanya
    tersisa sekitar 170px sementara ikonnya sendiri sudah 132px, sehingga

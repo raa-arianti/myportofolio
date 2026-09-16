@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block meta %}
+    <title>{{ page_title }} - {{ name }}</title>
+{% endblock meta %}
+
+{% block content %}
+    <main>
+        <section class="form-section">
+            <div class="container form-container">
+
+                <header class="projects-head">
+                    <h1>{{ page_title }}</h1>
+                </header>
+
+                {# Tanpa atribut action, form dikirim ke URL halaman ini sendiri, #}
+                {# jadi template yang sama bisa dipakai untuk tambah maupun ubah data. #}
+                <form method="post" class="entry-form">
+                    {% csrf_token %}
+
+                    {% for error in form.non_field_errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+
+                    {% for field in form %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <p class="form-help">{{ field.help_text }}</p>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <p class="form-error">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    <div class="form-actions">
+                        <a href="{{ cancel_url }}" class="button button-secondary">Cancel</a>
+                        <button type="submit" class="button">{{ submit_label }}</button>
+                    </div>
+                </form>
+
+            </div>
+        </section>
+    </main>
+{% endblock content %}

@@ -27,6 +27,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "ira-arianti-myportofolio.pws.cs.ui.ac.id"]
 
+# Origin yang dipercaya untuk request POST dari form (Tutorial 03).
+# Dua skema didaftarkan karena PWS bisa diakses lewat http maupun https.
+CSRF_TRUSTED_ORIGINS = [
+    "https://ira-arianti-myportofolio.pws.cs.ui.ac.id",
+    "http://ira-arianti-myportofolio.pws.cs.ui.ac.id",
+]
+
 
 # Application definition
 

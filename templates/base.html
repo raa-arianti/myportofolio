@@ -23,6 +23,15 @@
         </div>
     </header>
 
+    {# Pesan sukses dari messages.success() di view, misalnya setelah menambah proyek. #}
+    {% if messages %}
+        <div class="container flash-messages" role="status">
+            {% for message in messages %}
+                <p class="flash">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {% block content %}{% endblock content %}
 
     <footer class="site-footer">
