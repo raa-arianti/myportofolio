@@ -1,4 +1,6 @@
-from django.test import TestCase
+import json
+
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -83,3 +85,82 @@ class ProjectPageTest(TestCase):
             with self.subTest(page=page):
                 response = self.client.get(reverse(page))
                 self.assertContains(response, f'href="{self.url}"')
+
+
+class ProjectFormAndApiTest(TestCase):
+    """Fitur Tutorial 03: form tambah, data JSON, pencarian, dan hapus proyek."""
+
+    def setUp(self):
+        self.project = Project.objects.create(
+            title="Sortify",
+            description="Designing a simpler way to recognize waste.",
+            thumbnail="sortify-card.png",
+        )
+        self.create_url = reverse("main:create_project")
+        self.json_url = reverse("main:get_projects_json")
+        self.delete_url = reverse("main:delete_project", args=[self.project.id])
+
+    def test_create_page_renders_form_with_csrf_token(self):
+        response = self.client.get(self.create_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "projects_form.html")
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_create_project_with_valid_data(self):
+        response = self.client.post(
+            self.create_url,
+            {
+                "title": "Sheltra",
+                "description": "A women's safety platform.",
+                "thumbnail": "sheltra-card.png",
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, reverse("main:show_projects"))
+        self.assertTrue(Project.objects.filter(title="Sheltra").exists())
+        self.assertContains(response, "Project added successfully.")
+
+    def test_create_rejects_missing_image(self):
+        response = self.client.post(
+            self.create_url,
+            {"title": "Broken", "description": "No image.", "thumbnail": "does-not-exist.png"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Project.objects.filter(title="Broken").exists())
+        self.assertContains(response, "No image named does-not-exist.png")
+
+    def test_create_requires_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        response = csrf_client.post(
+            self.create_url,
+            {"title": "No token", "description": "Should fail.", "thumbnail": "sortify-card.png"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Project.objects.filter(title="No token").exists())
+
+    def test_projects_json(self):
+        response = self.client.get(self.json_url)
+        self.assertEqual(response["Content-Type"], "application/json")
+        data = json.loads(response.content)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["model"], "main.project")
+        self.assertEqual(data[0]["fields"]["title"], "Sortify")
+
+    def test_projects_json_filters_by_title(self):
+        Project.objects.create(title="Sheltra", description="Safety.", thumbnail="sheltra-card.png")
+        data = json.loads(self.client.get(self.json_url, {"title": "shel"}).content)
+        self.assertEqual([item["fields"]["title"] for item in data], ["Sheltra"])
+
+    def test_search_without_match_shows_message(self):
+        response = self.client.get(reverse("main:show_projects"), {"title": "zzz"})
+        self.assertNotContains(response, 'class="work-card"')
+        self.assertContains(response, "No projects match")
+
+    def test_delete_project_with_post(self):
+        response = self.client.post(self.delete_url)
+        self.assertRedirects(response, reverse("main:show_projects"))
+        self.assertFalse(Project.objects.filter(pk=self.project.id).exists())
+
+    def test_get_request_does_not_delete(self):
+        self.client.get(self.delete_url)
+        self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
