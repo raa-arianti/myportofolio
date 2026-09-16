@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.staticfiles import finders
 
-from main.models import Project
+from main.models import Experience, Project
 
 
 class ProjectForm(forms.ModelForm):
@@ -34,3 +34,35 @@ class ProjectForm(forms.ModelForm):
                 f"No image named {name} was found in static/img/projects/."
             )
         return name
+
+
+class ExperienceForm(forms.ModelForm):
+    """id dan started_at (auto_now_add) tidak dimasukkan karena diisi otomatis.
+    ended_at tetap dimasukkan karena diisi pemilik untuk menandai pengalaman selesai."""
+
+    class Meta:
+        model = Experience
+        fields = ["title", "description", "category", "thumbnail", "ended_at"]
+        labels = {
+            "title": "Role or activity",
+            "description": "Description",
+            "category": "Category",
+            "thumbnail": "Image URL",
+            "ended_at": "End date",
+        }
+        help_texts = {
+            "thumbnail": "Optional. A direct link to an image.",
+            "ended_at": "Leave empty if this experience is still ongoing.",
+        }
+        widgets = {
+            "title": forms.TextInput(
+                attrs={"placeholder": "Staff of Community Service Department"}
+            ),
+            "description": forms.Textarea(
+                attrs={"placeholder": "What did you do and learn?", "rows": 4}
+            ),
+            # DateTimeField ditampilkan sebagai pemilih tanggal saja. format wajib sama
+            # dengan yang dibaca <input type="date">, supaya tanggal tersimpan ikut
+            # muncul saat form ubah data dibuka.
+            "ended_at": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }

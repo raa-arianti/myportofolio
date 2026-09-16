@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.core import serializers
+from django.db.models import F
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -27,9 +28,26 @@ def show_main(request):
     return render(request, "index.html", context)
 
 
+def get_experience_json(request):
+    """Kirim data experience sebagai JSON. Yang masih berlangsung (ended_at kosong) di atas,
+    lalu yang paling baru selesai, sama seperti urutan linimasa di rancangan. Kalau tanggal
+    selesainya sama, yang lebih dulu dimasukkan tampil lebih dulu."""
+    experiences = Experience.objects.order_by(
+        F("ended_at").desc(nulls_first=True), "started_at"
+    )
+    experiences_json = serializers.serialize("json", experiences)
+    return HttpResponse(experiences_json, content_type="application/json")
+
+
 def show_experience(request):
+    """Seperti halaman proyek, data diambil dari JSON lalu di-deserialize."""
+    json_response = get_experience_json(request)
+    experience_list = [
+        item.object
+        for item in serializers.deserialize("json", json_response.content.decode("utf-8"))
+    ]
     context = {
-        "experience_list": Experience.objects.all(),
+        "experience_list": experience_list,
     }
     return render(request, "experience.html", context)
 
