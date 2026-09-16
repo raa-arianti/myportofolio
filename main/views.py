@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.core import serializers
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from main.forms import ProjectForm
@@ -79,3 +79,13 @@ def create_project(request):
         "cancel_url": reverse("main:show_projects"),
     }
     return render(request, "projects_form.html", context)
+
+
+def delete_project(request, project_id):
+    """Hapus proyek hanya lewat POST dari form konfirmasi. Request GET, misalnya
+    karena alamatnya dibuka langsung, tidak menghapus apa pun."""
+    project = get_object_or_404(Project, pk=project_id)
+    if request.method == "POST":
+        project.delete()
+        messages.success(request, f"{project.title} was deleted.")
+    return redirect("main:show_projects")
