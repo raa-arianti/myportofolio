@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block meta %}
+    <title>Owner only - {{ name }}</title>
+{% endblock meta %}
+
+{% block content %}
+    <main>
+        <section class="form-section">
+            <div class="container form-container">
+                <header class="projects-head">
+                    <h1>Owner only</h1>
+                    <p class="projects-sub">
+                        Only the owner of this portfolio can add, edit, or delete its content.
+                    </p>
+                    <a href="{% url 'main:show_main' %}" class="button projects-add">Back to home</a>
+                </header>
+            </div>
+        </section>
+    </main>
+{% endblock content %}

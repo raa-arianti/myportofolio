@@ -15,7 +15,9 @@
                         A collection of ideas, explorations, and things I&rsquo;ve built.
                         Each project is a small step in my learning journey.
                     </p>
-                    <a href="{% url 'main:create_project' %}" class="button projects-add">Add project</a>
+                    {% if is_owner %}
+                        <a href="{% url 'main:create_project' %}" class="button projects-add">Add project</a>
+                    {% endif %}
                 </header>
 
                 <form method="get" action="{% url 'main:show_projects' %}" class="projects-search" role="search">
@@ -38,7 +40,9 @@
                                 <h2>{{ project.title }}</h2>
                                 <p>{{ project.description }}</p>
                             </div>
-                            {% include "components/project_delete_modal.html" with project=project %}
+                            {% if is_owner %}
+                                {% include "components/project_delete_modal.html" with project=project %}
+                            {% endif %}
                         </article>
                     {% empty %}
                         {% if title_query %}

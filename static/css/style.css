@@ -636,6 +636,33 @@ html {
     margin-top: 1rem;
 }
 
+/* --- Penanda kecil di bawah navbar selama mode pemilik aktif. --- */
+.owner-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--accent-dark);
+}
+
+.owner-bar-logout {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+}
+
+.owner-bar-logout:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
 .flash {
     padding: 0.75rem 1.25rem;
     border-radius: var(--radius);

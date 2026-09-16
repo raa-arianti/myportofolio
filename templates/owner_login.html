@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block meta %}
+    <title>Owner - {{ name }}</title>
+    {# Halaman ini tidak perlu muncul di mesin pencari. #}
+    <meta name="robots" content="noindex">
+{% endblock meta %}
+
+{% block content %}
+    <main>
+        <section class="form-section">
+            <div class="container form-container">
+
+                <header class="projects-head">
+                    <h1>Owner mode</h1>
+                    <p class="projects-sub">Enter the owner secret to add, edit, and delete content.</p>
+                </header>
+
+                <form method="post" class="entry-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="id_secret">Owner secret</label>
+                        <input type="password" name="secret" id="id_secret"
+                               autocomplete="current-password" required autofocus>
+                        {% if error %}
+                            <p class="form-error">{{ error }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="{% url 'main:show_main' %}" class="button button-secondary">Cancel</a>
+                        <button type="submit" class="button">Enter owner mode</button>
+                    </div>
+                </form>
+
+            </div>
+        </section>
+    </main>
+{% endblock content %}

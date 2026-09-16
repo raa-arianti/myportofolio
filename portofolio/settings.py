@@ -24,6 +24,10 @@ load_dotenv(BASE_DIR / ".env")
 
 PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
+# Kata sandi mode pemilik (lihat main/owner.py). Kosong berarti fitur tambah, ubah,
+# dan hapus terbuka untuk semua orang, misalnya saat proyek dijalankan asisten dosen.
+OWNER_SECRET = os.getenv("OWNER_SECRET", "")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -80,6 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'main.context_processors.site',
             ],
         },
     },

@@ -3,21 +3,18 @@ from django.core import serializers
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from main.forms import ProjectForm
 from main.models import Experience, Project
+from main.owner import SESSION_KEY, is_owner, owner_lock_enabled, owner_required, secret_matches
 
-# Dipakai base.html (navbar, footer, judul tab) di setiap halaman, jadi ditulis sekali
-# di sini lalu disebarkan ke context tiap view dengan **SITE_OWNER.
-SITE_OWNER = {
-    "name": "Ira Arianti Alawiah",
-    "brand_name": "Ira Arianti",
-}
+# name dan brand_name untuk navbar, footer, dan judul tab dikirim oleh
+# main.context_processors.site ke semua template, jadi view tidak perlu mengirimnya.
 
 
 def show_main(request):
     context = {
-        **SITE_OWNER,
         "nickname": "Ira",
         "npm": "2506551775",
         "role": "CS Student at Universitas Indonesia",
@@ -32,7 +29,6 @@ def show_main(request):
 
 def show_experience(request):
     context = {
-        **SITE_OWNER,
         "experience_list": Experience.objects.all(),
     }
     return render(request, "experience.html", context)
@@ -57,13 +53,13 @@ def show_projects(request):
         for item in serializers.deserialize("json", json_response.content.decode("utf-8"))
     ]
     context = {
-        **SITE_OWNER,
         "project_list": project_list,
         "title_query": request.GET.get("title", "").strip(),
     }
     return render(request, "projects.html", context)
 
 
+@owner_required
 def create_project(request):
     form = ProjectForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -72,7 +68,6 @@ def create_project(request):
         return redirect("main:show_projects")
 
     context = {
-        **SITE_OWNER,
         "form": form,
         "page_title": "Add Project",
         "submit_label": "Add project",
@@ -81,6 +76,7 @@ def create_project(request):
     return render(request, "projects_form.html", context)
 
 
+@owner_required
 def delete_project(request, project_id):
     """Hapus proyek hanya lewat POST dari form konfirmasi. Request GET, misalnya
     karena alamatnya dibuka langsung, tidak menghapus apa pun."""
@@ -89,3 +85,28 @@ def delete_project(request, project_id):
         project.delete()
         messages.success(request, f"{project.title} was deleted.")
     return redirect("main:show_projects")
+
+
+def owner_login(request):
+    """Halaman masuk mode pemilik. Tidak ditautkan dari mana pun, dibuka lewat /owner/."""
+    if not owner_lock_enabled() or is_owner(request):
+        return redirect("main:show_projects")
+
+    error = ""
+    if request.method == "POST":
+        if secret_matches(request.POST.get("secret", "")):
+            # Ganti ID sesi setelah berhasil masuk, supaya ID sesi lama tidak bisa dipakai ulang.
+            request.session.cycle_key()
+            request.session[SESSION_KEY] = True
+            messages.success(request, "Owner mode is on.")
+            return redirect("main:show_projects")
+        error = "That secret is not correct."
+
+    return render(request, "owner_login.html", {"error": error})
+
+
+@require_POST
+def owner_logout(request):
+    request.session.pop(SESSION_KEY, None)
+    messages.success(request, "Owner mode is off.")
+    return redirect("main:show_main")
