@@ -198,11 +198,77 @@ h1, h2, h3, .brand {
     border: 3px solid var(--ink);
 }
 
+/* ==========================================================================
+   FOOTER
+   Lukisan cat air dipasang sebagai background, bukan <img>, karena sifatnya
+   murni dekoratif - tidak perlu diumumkan oleh pembaca layar.
+   Bagian atas berkasnya transparan, jadi lukisannya hanya muncul di bawah.
+   ========================================================================== */
+
+/* aspect-ratio menjaga footer setinggi lukisannya (1440 x 829), sehingga
+   puncak gunung di kanan tidak pernah terpotong tepi atas footer.
+
+   padding-top dalam persen dihitung dari LEBAR elemen. Karena tinggi lukisan
+   juga proporsional terhadap lebar, posisi teks terhadap lukisan tetap sama
+   di semua lebar layar. Menara di tengah memang sengaja menembus teks,
+   sesuai rancangan. */
 .site-footer {
-    padding: 1.5rem;
+    aspect-ratio: 1440 / 829;
+    padding: 17% 0 2rem;
+    text-align: center;
+    background-image: var(--img-footer-scene);
+    background-repeat: no-repeat;
+    background-position: bottom center;
+    background-size: 100% auto;
+}
+
+.footer-social {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+    margin-bottom: 0.9rem;
+}
+
+/* Huruf kapitalnya dibuat di sini, bukan diketik di HTML, supaya teks
+   aslinya tetap wajar dibaca pembaca layar maupun manusia. */
+.footer-social a {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-social a:hover {
+    color: var(--accent-dark);
+}
+
+.footer-email {
+    color: var(--ink);
+    font-size: 0.95rem;
+    text-decoration: underline;
+    text-underline-offset: 4px;     /* garis bawah diberi jarak, tidak menempel huruf */
+}
+
+/* max-width dalam satuan ch membatasi lebar berdasarkan jumlah karakter,
+   jadi kalimatnya patah jadi dua baris seperti rancangan tanpa perlu <br>. */
+.footer-tagline {
+    max-width: 52ch;
+    margin: 2.5rem auto 1.75rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    line-height: 1.8;
     color: var(--text-muted);
-    font-size: 0.85rem;
-    border-top: 1px solid var(--line);
+}
+
+.footer-legal {
+    font-size: 0.8rem;
+    line-height: 1.9;
+    color: var(--text-muted);
 }
 
 /* ==========================================================================
@@ -536,6 +602,23 @@ html {
 
     .site-header nav a + a {
         padding-left: 1rem;
+    }
+    
+    /* gap dengan dua nilai: jarak antarbaris dulu, baru jarak antarkolom.
+       Kalau empat tautan tidak muat dan turun ke baris kedua, barisnya tetap
+       rapat, tidak renggang seperti gap 2.5rem di layar lebar. Hurufnya juga
+       sedikit dikecilkan supaya lebih besar peluangnya muat satu baris. */
+    .footer-social {
+        gap: 0.5rem 1.25rem;
+    }
+
+    .footer-social a {
+        font-size: 0.8rem;
+    }
+
+    .footer-tagline {
+        margin: 1.75rem auto 1.25rem;
+        font-size: 0.85rem;
     }
 }
 
