@@ -13,7 +13,8 @@
     --accent-veil: rgba(255, 232, 239, 0.75);   /* --accent dengan opasitas 75% untuk lapisan di atas gambar */
     --line: #ece7e4;           /* garis pemisah halus */
     --text-muted: #6f6b68;     /* deskripsi & teks sekunder */
-
+    --photo-card: #f3f1f1;     /* SEMENTARA: cocokkan dengan Fill kartu foto di Figma hari Sabtu */
+    
     /* ===== BENTUK ===== */
     --radius: 12px;            /* sudut membulat kartu */
     --radius-sm: 8px;
@@ -90,113 +91,91 @@ h1, h2, h3, .brand {
     font-size: 0.95rem;
 }
 
+/* ==========================================================================
+   HERO
+   Tiga lapis dari belakang ke depan: gradasi pink (latar .hero), pita awan
+   cat air (.hero::after), lalu teks dan kartu foto (.hero-grid).
+   ========================================================================== */
+
+/* Gradasi diregangkan 100% 100% karena warnanya hanya berubah dari atas ke
+   bawah, jadi direntang setinggi apa pun hasilnya tetap mulus.
+   padding-bottom dalam persen (dihitung dari LEBAR) menyisakan ruang untuk
+   bagian awan yang berada di dalam hero, dan ikut menyusut bersama awannya. */
 .hero {
-    padding: 4.5rem 0 5rem;
+    position: relative;
+    padding: 8rem 0 16%;
+    background: var(--img-hero-tiles) top center / 100% 100% no-repeat;
 }
 
+/* Pita awan di pseudo-element supaya boleh meluber keluar hero.
+   Hasil ukur awan.png: 40%-51% tingginya tertutup awan penuh, di bawah 69%
+   sudah transparan. translateY(52%) menaruh tepi bawah hero tepat di pita
+   yang penuh itu, jadi batas gradasi pink tersembunyi di balik awan. */
+.hero::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    aspect-ratio: 1440 / 563;
+    background: var(--img-hero-clouds) center / 100% auto no-repeat;
+    transform: translateY(52%);
+    pointer-events: none;       /* awan tidak boleh menghalangi klik */
+}
+
+/* Lebar maksimal disamakan dengan kapsul navbar, dan padding-nya dengan
+   padding dalam kapsul, supaya judul sejajar dengan tulisan brand. */
 .hero-grid {
+    position: relative;
+    z-index: 1;                 /* teks dan foto di atas awan */
+    max-width: 1200px;
+    padding: 0 2.25rem;
     display: grid;
-    grid-template-columns: 1.3fr 1fr;
-    grid-template-areas:
-        "identity photo"
-        "details photo";
-    gap: 1.5rem 3rem;
+    grid-template-columns: 1fr minmax(0, 26rem);
+    align-items: center;
+    gap: 3rem;
 }
 
-.hero-identity {
-    grid-area: identity;
+/* Ukuran di Figma (bingkai 1440px): judul 48, baris identitas 24, bio 24.
+   clamp() menahannya di angka itu pada layar lebar dan mengecilkannya
+   perlahan pada layar yang lebih sempit. */
+.hero-text h1 {
+    font-size: clamp(2.25rem, 3.4vw, 3rem);
+    line-height: 1.15;
+    margin-bottom: 0.4rem;
 }
 
-.hero-details {
-    grid-area: details;
-}
-
-.hero-kicker {
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--accent-dark);
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-}
-
-.hero-identity h1 {
-    font-size: clamp(3rem, 7vw, 5rem);
-    line-height: 0.95;
+.hero-role {
+    font-family: var(--font-accent);
+    font-size: clamp(1rem, 1.7vw, 1.5rem);
+    margin-bottom: 1.75rem;
 }
 
 .bio {
-    color: var(--text-muted);
-    max-width: 480px;
-    margin-bottom: 1.5rem;
+    font-size: clamp(1rem, 1.7vw, 1.5rem);
+    line-height: 1.6;
 }
 
-.meta-list {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 1.5rem;
-}
-
-.meta-row dt {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    margin-bottom: 0.15rem;
-}
-
-.meta-row dd {
-    font-weight: 600;
-}
-
-.social-links {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.social-link {
-    display: inline-block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--paper);
-    background-color: var(--ink);
-    border-radius: var(--radius);
-    padding: 0.5rem 1.1rem;
-    transition: background-color 0.2s ease;
-}
-
-.social-link:hover {
-    background-color: var(--accent-dark);
-}
-
+/* Kartu foto. SENGAJA tanpa overflow: hidden, karena kepala di foto memang
+   menyembul melewati tepi atas kartu sesuai rancangan. */
 .hero-photo {
-    grid-area: photo;
-    align-self: center;
     position: relative;
-}
-
-.photo-block {
-    position: absolute;
-    top: 1.25rem;
-    left: 1.25rem;
-    width: 100%;
-    height: 100%;
-    background-color: var(--accent);
+    aspect-ratio: 8 / 5;
+    background-color: var(--photo-card);
     border-radius: var(--radius);
-    z-index: 0;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
 }
 
+/* foto.png adalah cutout transparan. Tingginya 134% dari kartu dan
+   ditambatkan di dasar, jadi sekitar sepertiga bagian atasnya keluar ke atas.
+   left: 50% lalu translateX(-50%) menaruhnya tepat di tengah. */
 .avatar {
-    position: relative;
-    z-index: 1;
-    display: block;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: var(--radius);
-    border: 3px solid var(--ink);
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    height: 134%;
+    width: auto;
+    transform: translateX(-50%);
 }
 
 /* ==========================================================================
@@ -280,7 +259,10 @@ h1, h2, h3, .brand {
    Layout: CSS Grid tiga kolom sama lebar.
    ========================================================================== */
 
+/* position: relative supaya section ini digambar DI ATAS pita awan hero
+   yang meluber ke sini. Tanpa ini, awan menutupi judul Focus Areas. */
 .focus {
+    position: relative;
     padding: 5rem 0;
 }
 
@@ -561,13 +543,6 @@ html {
 }
 
 @media (max-width: 600px) {
-        .hero-grid {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "identity"
-            "photo"
-            "details";
-    }
 
     /* Di bawah 600px gambar Sortify hanya setinggi ~320px sementara lapisan
     teks tetap ~106px. Menumpuk di sini justru menutupi isi gambar, jadi
@@ -578,13 +553,6 @@ html {
         background-color: var(--accent);
     }
 
-    .hero-photo {
-        max-width: 220px;
-    }
-
-    .social-links {
-        justify-content: flex-start;
-    }
 
     
     /* Di layar sempit, isi kapsul yang berjajar menyamping jadi terlalu panjang
@@ -633,8 +601,7 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
     .focus-card,
-    .focus-icon,
-    .social-link {
+    .focus-icon {
         transition: none;
     }
 

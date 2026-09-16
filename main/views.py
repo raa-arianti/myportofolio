@@ -7,12 +7,13 @@ def show_main(request):
     context = {
         "name": "Ira Arianti Alawiah",
         "brand_name": "Ira Arianti",
+        "nickname": "Ira",
         "npm": "2506551775",
-        "study_program": "S1 Ilmu Komputer",
+        "role": "CS Student at Universitas Indonesia",
         "bio": (
-            "CS student at Universitas Indonesia, curious about AI, "
-            "Machine Learning, and Robotics. I build, experiment, "
-            "and occasionally wonder why my code stopped working."
+            "I enjoy learning deeply,\n"
+            "turning complex ideas into clear solutions,\n"
+            "building with purpose and care."
         ),
     }
     return render(request, "index.html", context)
