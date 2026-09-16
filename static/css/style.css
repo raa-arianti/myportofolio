@@ -14,7 +14,7 @@
     --line: #ece7e4;           /* garis pemisah halus */
     --text-muted: #6f6b68;     /* deskripsi & teks sekunder */
     --photo-card: #f3f1f1;     /* SEMENTARA: cocokkan dengan Fill kartu foto di Figma hari Sabtu */
-    
+
     /* ===== BENTUK ===== */
     --radius: 12px;            /* sudut membulat kartu */
     --radius-sm: 8px;
@@ -506,6 +506,29 @@ html {
    diturunkan menjadi satu kolom, bukan dua - tiga item ganjil akan
    menyisakan satu kartu menggantung kalau dipaksa dua kolom.
    ========================================================================== */
+/* Hero punya breakpoint sendiri, hasil ukur: kartu foto tetap 416px, jadi
+   di 940px baris identitas sudah patah jadi 2 dan di 860px bio yang sengaja
+   3 baris pecah jadi 4. Di 961px keduanya masih utuh, maka titiknya 960px,
+   bukan 820px yang dipakai section lain. Di bawah ini hero ditumpuk. */
+@media (max-width: 960px) {
+    .hero {
+        padding-top: 5rem;
+    }
+
+    .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding: 0 1.5rem;
+    }
+
+    /* Ruang di atas kartu untuk kepala yang menyembul (34% tinggi kartu,
+       paling besar sekitar 88px), ditambah jarak napas dari bio. */
+    .hero-photo {
+        max-width: 26rem;
+        margin-top: 7rem;
+    }
+}
+
 
 @media (max-width: 820px) {
         .focus {
