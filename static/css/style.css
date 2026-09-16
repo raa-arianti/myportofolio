@@ -49,15 +49,26 @@ h1, h2, h3, .brand {
     padding: 0 1.5rem;
 }
 
+/* Navbar berbentuk kapsul mengambang, bukan bilah selebar layar.
+   Padding di sini yang memberi jarak kapsul dari tepi atas dan kiri-kanan. */
 .site-header {
-    border-bottom: 1px solid var(--line);
+    padding: 1.25rem 1.5rem 0;
 }
 
+/* max-width khusus header, lebih lebar dari .container biasa (960px)
+   supaya kapsulnya mendekati lebar layar seperti di rancangan.
+   border-radius 999px bikin sisi kiri-kanan jadi setengah lingkaran,
+   berapa pun tinggi kapsulnya. */
 .site-header .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.5rem;
+    max-width: 1200px;
+    padding: 0.85rem 2.25rem;
+    background-color: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 2px 12px rgba(160, 90, 118, 0.07);
 }
 
 .brand {
@@ -448,22 +459,23 @@ html {
    ========================================================================== */
 
 @media (max-width: 820px) {
-    .focus {
+        .focus {
         padding: 3.5rem 0;
-        /* Kolom 1 : 2.44 terlalu sempit di bawah 820px - kartu Sortify menyusut
-        sampai lapisan pink memakan hampir separuh gambarnya. Turunkan ke satu
-        kolom penuh supaya tiap gambar kembali punya tinggi yang memadai. */
-        .work {
-            padding: 1rem 0 4rem;
-        }
+    }
 
-        .work-grid {
-            grid-template-columns: 1fr;
-        }
+    /* Kolom 1 : 2.44 terlalu sempit di bawah 820px - kartu Sortify menyusut
+    sampai lapisan pink memakan hampir separuh gambarnya. Turunkan ke satu
+    kolom penuh supaya tiap gambar kembali punya tinggi yang memadai. */
+    .work {
+        padding: 1rem 0 4rem;
+    }
 
-        .work-card--wide {
-            grid-column: auto;
-        }
+    .work-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .work-card--wide {
+        grid-column: auto;
     }
 
     .section-head {
@@ -482,20 +494,21 @@ html {
 }
 
 @media (max-width: 600px) {
-    .hero-grid {
+        .hero-grid {
         grid-template-columns: 1fr;
         grid-template-areas:
             "identity"
             "photo"
             "details";
-        /* Di bawah 600px gambar Sortify hanya setinggi ~320px sementara lapisan
-        teks tetap ~106px. Menumpuk di sini justru menutupi isi gambar, jadi
-        lapisannya dikembalikan ke alur normal - duduk di bawah gambar, dengan
-        pink solid karena tidak ada lagi gambar di belakangnya. */
-        .work-body {
-            position: static;
-            background-color: var(--accent);
-        }
+    }
+
+    /* Di bawah 600px gambar Sortify hanya setinggi ~320px sementara lapisan
+    teks tetap ~106px. Menumpuk di sini justru menutupi isi gambar, jadi
+    lapisannya dikembalikan ke alur normal - duduk di bawah gambar, dengan
+    pink solid karena tidak ada lagi gambar di belakangnya. */
+    .work-body {
+        position: static;
+        background-color: var(--accent);
     }
 
     .hero-photo {
@@ -504,6 +517,25 @@ html {
 
     .social-links {
         justify-content: flex-start;
+    }
+
+    
+    /* Di layar sempit, isi kapsul yang berjajar menyamping jadi terlalu panjang
+       dan menu terdorong keluar. Ditumpuk jadi dua baris, dan sudutnya
+       dilembutkan karena bentuknya bukan kapsul memanjang lagi. */
+    .site-header .container {
+        flex-direction: column;
+        gap: 0.65rem;
+        padding: 0.9rem 1.25rem;
+        border-radius: 24px;
+    }
+
+    .site-header nav {
+        gap: 1rem;
+    }
+
+    .site-header nav a + a {
+        padding-left: 1rem;
     }
 }
 
