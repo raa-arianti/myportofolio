@@ -400,7 +400,9 @@ h1, h2, h3, .brand {
     padding: 0.9rem 1.5rem 1.1rem;
     background-color: var(--accent-veil);
 }
-
+/* h3 di Recent Work (home), h2 di halaman proyek karena di sana judul
+   halamannya h1. Gayanya sama. */
+.work-body h2,
 .work-body h3 {
     font-size: 1.25rem;
     line-height: 1.3;          /* judul tidak butuh jarak baris selebar teks isi */
@@ -496,6 +498,59 @@ html {
     margin-top: 1rem;
     font-size: 0.85rem;
     font-weight: 600;
+}
+
+/* ==========================================================================
+   PROJECTS
+   Halaman /projects/. Kartunya memakai ulang .work-card dari Recent Work,
+   jadi yang baru di sini hanya judul halaman dan grid.
+   ========================================================================== */
+
+.projects-section {
+    padding: 5rem 0 4rem;
+}
+
+/* Tiga kartu 300px + dua jarak 40px = 980px, lebih lebar dari .container
+   biasa (960px). Dilebarkan khusus di section ini supaya desktop dapat
+   tiga kolom seperti rancangan. */
+.projects-section .container {
+    max-width: 1200px;
+}
+
+.projects-head {
+    max-width: 40rem;
+    margin: 0 auto 3.5rem;
+    text-align: center;
+}
+
+.projects-head h1 {
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+}
+
+/* text-wrap: balance menyamakan panjang kedua baris subjudul. */
+.projects-sub {
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    line-height: 1.5;
+    text-wrap: balance;
+}
+
+/* auto-fill membuat kolom 300px sebanyak yang muat: 3 di desktop, 2 di
+   tablet, 1 di HP, tanpa media query. Lebar 300px sama dengan lebar asli
+   gambar kartu, jadi gambar tidak pernah diperbesar dan tetap tajam. */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 300px);
+    justify-content: center;
+    gap: 3rem 2.5rem;
+}
+
+/* Pesan kosong ikut menjadi isi grid, jadi dibentangkan selebar semua
+   kolom supaya tidak terjepit di kolom pertama. */
+.projects-grid .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
 }
 
 /* ==========================================================================
