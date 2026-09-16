@@ -19,8 +19,9 @@
     --radius-sm: 8px;
 
     /* ===== TIPOGRAFI ===== */
-    --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
-    --font-body: "Lora", Georgia, "Times New Roman", serif;
+        --font-display: "Playfair Display", Georgia, "Times New Roman", serif;   /* judul */
+    --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;        /* teks biasa */
+    --font-accent: "Libre Baskerville", Georgia, "Times New Roman", serif;   /* baris identitas di hero */
     --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
     /* ===== ASSET SLOTS =====
