@@ -608,6 +608,30 @@ html {
     margin-top: 1.5rem;
 }
 
+.projects-search {
+    display: flex;
+    gap: 0.6rem;
+    max-width: 34rem;
+    margin: -1rem auto 3rem;    /* ditarik sedikit ke atas agar dekat dengan judul */
+}
+
+.projects-search-input {
+    flex: 1;
+    min-width: 0;               /* izinkan menyusut di layar sempit */
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background-color: var(--paper);
+    color: var(--ink);
+    font: inherit;
+}
+
+.projects-search-input:focus {
+    outline: 2px solid var(--accent-dark);
+    outline-offset: 1px;
+    border-color: var(--accent-dark);
+}
+
 .flash-messages {
     margin-top: 1rem;
 }

@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.core import serializers
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
@@ -36,10 +38,28 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 
+def get_projects_json(request):
+    """Kirim data proyek sebagai JSON. ?title=... menyaring berdasarkan judul."""
+    title_query = request.GET.get("title", "").strip()
+    projects = Project.objects.all()
+    if title_query:
+        projects = projects.filter(title__icontains=title_query)
+    projects_json = serializers.serialize("json", projects)
+    return HttpResponse(projects_json, content_type="application/json")
+
+
 def show_projects(request):
+    """Halaman proyek tidak membaca basis data langsung: datanya diambil dari JSON
+    get_projects_json, lalu di-deserialize kembali menjadi objek Project."""
+    json_response = get_projects_json(request)
+    project_list = [
+        item.object
+        for item in serializers.deserialize("json", json_response.content.decode("utf-8"))
+    ]
     context = {
         **SITE_OWNER,
-        "project_list": Project.objects.all(),
+        "project_list": project_list,
+        "title_query": request.GET.get("title", "").strip(),
     }
     return render(request, "projects.html", context)
 

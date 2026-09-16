@@ -18,6 +18,17 @@
                     <a href="{% url 'main:create_project' %}" class="button projects-add">Add project</a>
                 </header>
 
+                <form method="get" action="{% url 'main:show_projects' %}" class="projects-search" role="search">
+                    <input type="search" name="title" value="{{ title_query }}"
+                           class="projects-search-input"
+                           placeholder="Search projects by title"
+                           aria-label="Search projects by title">
+                    <button type="submit" class="button">Search</button>
+                    {% if title_query %}
+                        <a href="{% url 'main:show_projects' %}" class="button button-secondary">Clear</a>
+                    {% endif %}
+                </form>
+
                 <div class="projects-grid">
                     {% for project in project_list %}
                         <article class="work-card">
@@ -29,7 +40,11 @@
                             </div>
                         </article>
                     {% empty %}
-                        <p class="empty-state">No projects have been added yet.</p>
+                        {% if title_query %}
+                            <p class="empty-state">No projects match &ldquo;{{ title_query }}&rdquo;.</p>
+                        {% else %}
+                            <p class="empty-state">No projects have been added yet.</p>
+                        {% endif %}
                     {% endfor %}
                 </div>
 
