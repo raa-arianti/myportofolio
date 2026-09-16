@@ -500,6 +500,21 @@ html {
     font-weight: 600;
 }
 
+.experience-add {
+    margin: -0.5rem 0 1.75rem;
+}
+
+/* Gambar opsional dari field thumbnail. aspect-ratio menyeragamkan tinggi gambar
+   antar kartu walaupun ukuran asli gambarnya berbeda-beda. */
+.experience-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    border-radius: var(--radius-sm);
+}
+
 /* ==========================================================================
    PROJECTS
    Halaman /projects/. Kartunya memakai ulang .work-card dari Recent Work,

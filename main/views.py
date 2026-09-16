@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from main.forms import ProjectForm
+from main.forms import ExperienceForm, ProjectForm
 from main.models import Experience, Project
 from main.owner import SESSION_KEY, is_owner, owner_lock_enabled, owner_required, secret_matches
 
@@ -134,6 +134,52 @@ def delete_project(request, project_id):
         project.delete()
         messages.success(request, f"{project.title} was deleted.")
     return redirect("main:show_projects")
+
+
+
+@owner_required
+def create_experience(request):
+    form = ExperienceForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Experience added successfully.")
+        return redirect("main:show_experience")
+
+    return render_entry_form(
+        request,
+        form,
+        page_title="Add Experience",
+        submit_label="Add experience",
+        cancel_url_name="main:show_experience",
+    )
+
+
+@owner_required
+def edit_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+    form = ExperienceForm(request.POST or None, instance=experience)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"{experience.title} was updated.")
+        return redirect("main:show_experience")
+
+    return render_entry_form(
+        request,
+        form,
+        page_title="Edit Experience",
+        submit_label="Save changes",
+        cancel_url_name="main:show_experience",
+    )
+
+
+@owner_required
+def delete_experience(request, experience_id):
+    """Sama seperti delete_project: hanya POST yang menghapus."""
+    experience = get_object_or_404(Experience, pk=experience_id)
+    if request.method == "POST":
+        experience.delete()
+        messages.success(request, f"{experience.title} was deleted.")
+    return redirect("main:show_experience")
 
 
 def owner_login(request):
