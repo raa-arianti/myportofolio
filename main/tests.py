@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from main.models import Experience
+from main.models import Experience, Project
 
 
 class MainTest(TestCase):
@@ -51,3 +51,35 @@ class MainTest(TestCase):
         self.assertFalse(self.experience.is_ongoing)
         self.assertContains(response, "Selesai")
         self.assertNotContains(response, "Sedang berlangsung")
+
+class ProjectPageTest(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            title="Sortify",
+            description="Designing a simpler way to recognize waste.",
+            thumbnail="sortify-card.png",
+        )
+        self.url = reverse("main:show_projects")
+
+    def test_projects_url_is_accessible(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "projects.html")
+
+    def test_project_data_is_displayed(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, self.project.title)
+        self.assertContains(response, self.project.description)
+        self.assertContains(response, 'src="/static/img/projects/sortify-card.png"')
+        self.assertNotContains(response, "No projects have been added yet.")
+
+    def test_empty_projects_page(self):
+        Project.objects.all().delete()
+        response = self.client.get(self.url)
+        self.assertContains(response, "No projects have been added yet.")
+
+    def test_navbar_links_to_projects_page(self):
+        for page in ("main:show_main", "main:show_experience", "main:show_projects"):
+            with self.subTest(page=page):
+                response = self.client.get(reverse(page))
+                self.assertContains(response, f'href="{self.url}"')
