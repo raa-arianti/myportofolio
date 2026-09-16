@@ -31,6 +31,30 @@ Website terdiri atas tiga halaman:
 | Experience | `/experience/` | daftar pengalaman dari model `Experience` |
 | Projects | `/projects/` | daftar proyek dari model `Project` |
 
+Sejak Tutorial 03 dan Tugas 3, proyek dan experience dapat **ditambah, diubah, dan dihapus**
+lewat form, datanya juga tersedia dalam **format JSON**, dan halaman daftarnya dirender dari
+JSON tersebut. Semua halaman memakai kerangka `base.html` yang sama.
+
+| Fitur | URL |
+|---|---|
+| Tambah proyek | `/projects/add/` |
+| Ubah dan hapus proyek | `/projects/<id>/edit/`, `/projects/<id>/delete/` |
+| Tambah experience | `/experience/add/` |
+| Ubah dan hapus experience | `/experience/<id>/edit/`, `/experience/<id>/delete/` |
+| Data JSON | `/api/projects/` (mendukung `?title=`), `/api/experience/` |
+| Masuk mode pemilik | `/owner/` |
+
+### Mode pemilik
+
+Karena belum ada login, fitur tambah, ubah, dan hapus dikunci dengan environment variable
+`OWNER_SECRET`. Pengunjung tidak melihat tombol apa pun, dan membuka URL form secara
+langsung menghasilkan halaman **403**. Pemilik membuka `/owner/`, memasukkan kata sandi,
+lalu semua tombol muncul sampai ia keluar.
+
+Kalau `OWNER_SECRET` **tidak diatur**, kunci dinonaktifkan dan semua fitur form terbuka.
+Ini disengaja supaya asisten dosen yang menjalankan proyek di laptopnya tetap bisa menguji
+seluruh fitur tanpa perlu kata sandi.
+
 ## Teknologi
 
 - Python 3.13 dan Django 5.2 (LTS, menyesuaikan dukungan PostgreSQL di PWS)
@@ -48,14 +72,23 @@ myportofolio/
 ├── portofolio/              # konfigurasi Django (settings, urls proyek, wsgi)
 ├── main/                    # aplikasi utama
 │   ├── models.py            # model Experience dan Project
-│   ├── views.py             # show_main, show_experience, show_projects
+│   ├── forms.py             # ProjectForm dan ExperienceForm (ModelForm)
+│   ├── views.py             # halaman, form, endpoint JSON, dan mode pemilik
 │   ├── urls.py              # named route aplikasi (namespace "main")
-│   ├── tests.py             # unit test tiap halaman
+│   ├── owner.py             # kunci mode pemilik (OWNER_SECRET)
+│   ├── context_processors.py  # data yang dibutuhkan base.html di semua halaman
+│   ├── tests.py             # unit test
 │   └── migrations/          # riwayat perubahan skema basis data
 ├── templates/
+│   ├── base.html            # kerangka bersama: head, navbar, footer, pesan
 │   ├── index.html           # halaman utama
 │   ├── experience.html      # daftar pengalaman
-│   └── projects.html        # daftar proyek
+│   ├── projects.html        # daftar proyek dengan pencarian
+│   ├── entry_form.html      # satu halaman form untuk tambah dan ubah data
+│   ├── owner_login.html     # masuk mode pemilik
+│   ├── 403.html             # halaman untuk pengunjung yang bukan pemilik
+│   └── components/
+│       └── owner_actions.html  # tombol Edit, Delete, dan dialog konfirmasi
 └── static/
     ├── css/style.css        # seluruh gaya halaman
     └── img/                 # foto, ilustrasi cat air, ikon, dan gambar proyek
@@ -78,6 +111,7 @@ pip install -r requirements.txt
 
 # 4. Buat berkas .env di root proyek, isi dengan:
 #    PRODUCTION=False
+#    OWNER_SECRET=          (kosongkan agar semua fitur form terbuka saat dicoba lokal)
 
 # 5. Jalankan migrasi dan server
 python manage.py migrate
@@ -90,7 +124,11 @@ python manage.py test main
 Halaman dapat diakses di http://localhost:8000/
 
 Halaman Experience dan Projects akan menampilkan pesan kosong sampai datanya
-ditambahkan, misalnya lewat `python manage.py shell`.
+ditambahkan lewat tombol **Add project** dan **Add experience**.
+
+Di PWS, `PRODUCTION=True` membuat Django memakai PostgreSQL dari variabel `DB_NAME`,
+`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, dan `SCHEMA`, sehingga data tidak hilang
+setiap kali deploy. `OWNER_SECRET` diatur di Project Environment Variables PWS.
 
 ---
 
@@ -126,6 +164,19 @@ ternyata tidak pernah aktif, karena aturannya tertulis bersarang di dalam selekt
 Menambahkan model `Project`, halaman `/projects/` berisi kartu proyek dari basis data
 dengan tampilan kondisi kosong, tautan navbar dengan `{% url %}`, grid kartu responsif
 tanpa media query, dan empat unit test baru.
+
+### Tutorial 03, Form dan Data Delivery
+Memindahkan head, navbar, dan footer ke `base.html` yang di-extend semua halaman, membuat
+form tambah proyek dengan `ModelForm` dan CSRF token, endpoint JSON `/api/projects/` yang
+juga dipakai untuk merender halaman proyek setelah di-deserialize, pencarian berdasarkan
+judul, serta hapus proyek dengan dialog konfirmasi.
+
+### Tugas 3, Form dan JSON untuk Experience
+Menambahkan `ExperienceForm`, halaman tambah dan ubah experience, tombol hapus, dan
+endpoint `/api/experience/` yang dipakai untuk merender halaman experience. Sebagai fitur
+tambahan: proyek juga bisa diubah, satu halaman form dan satu komponen aksi dipakai bersama,
+PWS kini memakai PostgreSQL agar data tidak hilang saat deploy, dan **mode pemilik** membuat
+hanya pemilik yang dapat menambah, mengubah, dan menghapus konten.
 
 ---
 
@@ -324,6 +375,20 @@ Dua hal yang saya pelajari dari pemisahan ini:
   `python manage.py shell` hanya mengisi tabel yang strukturnya sudah ada, jadi tidak perlu
   `makemigrations` maupun `migrate`.
 
+### Tugas 3
+
+**1. Jelaskan mengapa kita menggunakan ModelForm pada Django alih-alih membuat form HTML secara manual. Selain itu, jelaskan pula mengapa kita diwajibkan menambahkan `{% csrf_token %}` pada form tersebut!**
+
+<!-- JAWABAN IRA -->
+
+**2. Pada Tutorial 03, kita membahas format data JSON dan XML. Mengapa JSON lebih disukai dalam pengembangan aplikasi web modern dibandingkan XML?**
+
+<!-- JAWABAN IRA -->
+
+**3. Jelaskan alur yang terjadi saat kamu menggunakan fungsi view untuk mengembalikan data portofoliomu dalam bentuk JSON. Mengapa kita perlu melakukan proses serialization pada model Django sebelum datanya dikembalikan?**
+
+<!-- JAWABAN IRA -->
+
 ---
 
 ## Penggunaan AI (AI Disclosure)
@@ -498,3 +563,61 @@ subjudul section, deskripsi kartu, dan footer, serta warna kartu foto (`#f3f1f1`
 berupa asumsi. Warna kartu sengaja ditaruh sebagai token dengan komentar "SEMENTARA" agar
 mudah diganti. Deskripsi kartu proyek juga masih sans-serif, padahal di rancangan tampak
 serif. Saya mencatat ini sebagai pekerjaan yang belum selesai, bukan keputusan desain.
+
+### Tutorial 03 dan Tugas 3
+
+#### Tools
+
+**Claude (model Opus 5) melalui Claude Code** di aplikasi desktop, 16 September 2026, dalam
+percakapan yang sama dengan Tutorial 02 dan Tugas 2.
+
+#### Strategi prompting
+
+Berbeda dari tugas sebelumnya, untuk Tutorial 03 dan Tugas 3 saya **secara eksplisit
+mengizinkan AI mengubah kode dan membuat commit langsung**, satu commit per tahap, karena
+Tutorial 03 berbatas waktu malam itu juga dan jadwal saya beberapa hari setelahnya penuh.
+Sebagai gantinya saya meminta setiap tahap diverifikasi dengan unit test dan pengecekan di
+browser sebelum di-commit, dan saya yang menjalankan push, merge, dan deploy.
+
+Saya juga mengarahkan desain fiturnya sendiri. Setelah melihat bahwa siapa pun bisa
+menambah dan menghapus konten di PWS, saya meminta agar pengunjung hanya melihat data,
+sedangkan tombol tambah, ubah, dan hapus hanya bisa dipakai oleh saya. Permintaan ini yang
+menjadi fitur mode pemilik.
+
+#### Bagian yang dikerjakan AI
+
+- Menulis kode Tutorial 03 (kecuali `base.html`, yang saya buat sendiri) dan Tugas 3:
+  `forms.py`, view dan route untuk form, endpoint JSON, pencarian, hapus dengan dialog
+  konfirmasi, ubah data, serta CSS tombol, form, dan dialog.
+- Menemukan bahwa `settings.py` tidak pernah membaca variabel basis data, sehingga PWS
+  selama ini memakai SQLite yang dibuat ulang setiap deploy, lalu mengubahnya agar memakai
+  PostgreSQL saat `PRODUCTION=True`.
+- Merancang dan menulis mode pemilik (`owner.py`, context processor, halaman `/owner/`,
+  halaman 403) sesuai permintaan saya.
+- Menulis 24 unit test baru, sehingga total menjadi 34 test.
+- Memperbarui README dan menyusun draf bagian AI disclosure ini.
+
+#### Bagian yang saya kerjakan sendiri
+
+- Membuat branch Tutorial 03 dan `base.html`, lalu memutuskan menyerahkan sisa pengerjaan
+  kepada AI karena tenggat.
+- Menentukan perilaku mode pemilik: data tampil untuk semua orang, tetapi hanya saya yang
+  boleh mengubahnya.
+- Memeriksa Project Environment Variables di PWS, mengatur `OWNER_SECRET`, menjalankan push,
+  merge, dan deploy, serta mengisi ulang data portofolio di PWS lewat form.
+- Menulis jawaban pertanyaan reflektif Tugas 3.
+
+#### Keterbatasan AI yang saya temukan
+
+**1. AI tidak sengaja menghapus data asli saya.** Saat menguji fitur hapus, AI menjalankan
+percobaan langsung ke basis data lokal saya dengan asumsi perubahannya bisa dibatalkan
+lewat savepoint. Asumsi itu salah, karena shell Django berjalan dalam mode autocommit, dan
+proyek RumputSehatEWS benar-benar terhapus. AI menyadarinya dari jumlah data yang berubah,
+memulihkan data yang sama di urutan semula, dan sejak itu hanya menguji perubahan data di
+basis data test Django. Pelajaran bagi saya: pengujian yang mengubah data tidak boleh
+dijalankan ke basis data yang berisi data asli.
+
+**2. Masalah konfigurasi yang lebih besar baru terlihat ketika dicari alasannya.** Selama
+Tugas 1 dan Tugas 2, tidak ada yang menyadari bahwa PWS tidak memakai PostgreSQL. Hal ini
+baru ketahuan ketika saya meminta agar data tampil permanen di PWS, dan AI membaca ulang
+`settings.py` untuk mencari tahu kenapa data di sana selalu kosong.
