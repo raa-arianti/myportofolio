@@ -1,6 +1,6 @@
 import json
 
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -164,3 +164,67 @@ class ProjectFormAndApiTest(TestCase):
     def test_get_request_does_not_delete(self):
         self.client.get(self.delete_url)
         self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
+
+
+@override_settings(OWNER_SECRET="test-owner-secret")
+class OwnerModeTest(TestCase):
+    """Dengan OWNER_SECRET aktif, hanya sesi pemilik yang boleh menambah dan menghapus."""
+
+    def setUp(self):
+        self.project = Project.objects.create(
+            title="Sortify",
+            description="Designing a simpler way to recognize waste.",
+            thumbnail="sortify-card.png",
+        )
+        self.login_url = reverse("main:owner_login")
+        self.projects_url = reverse("main:show_projects")
+
+    def log_in(self):
+        return self.client.post(self.login_url, {"secret": "test-owner-secret"})
+
+    def test_visitor_does_not_see_owner_controls(self):
+        response = self.client.get(self.projects_url)
+        self.assertContains(response, self.project.title)
+        self.assertNotContains(response, "Add project")
+        self.assertNotContains(response, 'class="card-action"')
+        self.assertNotContains(response, "Owner mode")
+
+    def test_visitor_is_forbidden_from_protected_views(self):
+        response = self.client.get(reverse("main:create_project"))
+        self.assertEqual(response.status_code, 403)
+        self.assertTemplateUsed(response, "403.html")
+
+        response = self.client.post(reverse("main:delete_project", args=[self.project.id]))
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
+
+    def test_wrong_secret_keeps_site_locked(self):
+        response = self.client.post(self.login_url, {"secret": "guess"})
+        self.assertContains(response, "That secret is not correct.")
+        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 403)
+
+    def test_correct_secret_unlocks_owner_controls(self):
+        self.assertRedirects(self.log_in(), self.projects_url)
+        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 200)
+
+        response = self.client.get(self.projects_url)
+        self.assertContains(response, "Add project")
+        self.assertContains(response, 'class="card-action"')
+        self.assertContains(response, "Owner mode")
+
+    def test_logout_locks_site_again(self):
+        self.log_in()
+        self.assertEqual(self.client.get(reverse("main:owner_logout")).status_code, 405)
+        self.client.post(reverse("main:owner_logout"))
+        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 403)
+
+
+class OwnerLockDisabledTest(TestCase):
+    """Tanpa OWNER_SECRET, kunci nonaktif sehingga fitur form bisa diuji siapa pun."""
+
+    @override_settings(OWNER_SECRET="")
+    def test_everyone_is_owner_without_secret(self):
+        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 200)
+        self.assertRedirects(
+            self.client.get(reverse("main:owner_login")), reverse("main:show_projects")
+        )
