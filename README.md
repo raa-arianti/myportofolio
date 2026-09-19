@@ -379,15 +379,89 @@ Dua hal yang saya pelajari dari pemisahan ini:
 
 **1. Jelaskan mengapa kita menggunakan ModelForm pada Django alih-alih membuat form HTML secara manual. Selain itu, jelaskan pula mengapa kita diwajibkan menambahkan `{% csrf_token %}` pada form tersebut!**
 
-<!-- JAWABAN IRA -->
+**ModelForm** membuat form langsung dari model, jadi aturan datanya cukup ditulis sekali di
+`models.py`. Di proyek saya, `ExperienceForm` hanya perlu menyebut daftar field di
+`class Meta`, lalu Django otomatis:
+
+- memilih elemen HTML yang sesuai: `category` yang punya `choices` menjadi dropdown,
+  `description` yang berupa `TextField` menjadi textarea;
+- memvalidasi input sesuai model: kategori di luar pilihan ditolak (diuji oleh
+  `test_create_experience_rejects_unknown_category`), field wajib tidak boleh kosong, dan
+  panjang teks dibatasi `max_length`;
+- mengubah teks dari form menjadi tipe Python, misalnya tanggal `2026-02-28` menjadi
+  `datetime`;
+- menyimpan data lewat `form.save()`. Untuk form ubah, cukup menambahkan
+  `instance=experience`, dan `form.save()` memperbarui baris yang sama, bukan membuat baris
+  baru.
+
+Saya juga bisa menambah aturan sendiri. `ProjectForm` punya `clean_thumbnail()` yang
+menolak nama gambar yang tidak ada di `static/img/projects/`, sehingga kartu proyek tidak
+pernah tampil dengan gambar rusak. Kalau form ditulis manual, semua aturan itu harus saya
+tulis ulang sendiri: membaca `request.POST`, memeriksa setiap nilai, mengubah tipenya, dan
+menampilkan kembali pesan error beserta isian sebelumnya.
+
+**`{% csrf_token %}`** melindungi dari serangan *Cross-Site Request Forgery*. Saat saya
+masuk mode pemilik, browser saya menyimpan cookie sesi. Tanpa perlindungan, sebuah situs
+lain bisa diam-diam mengirim form POST ke `/projects/<id>/delete/`, dan browser saya akan
+ikut mengirim cookie itu, sehingga proyek saya terhapus tanpa saya sadari. Token CSRF
+adalah nilai acak yang disisipkan di setiap form milik situs saya. Situs lain tidak bisa
+membaca nilai itu, jadi request palsu tidak membawa token yang cocok dan Django menolaknya
+dengan status 403. Ini diuji oleh `test_create_requires_csrf_token`. Karena itu pula alamat
+PWS saya didaftarkan di `CSRF_TRUSTED_ORIGINS`. 
 
 **2. Pada Tutorial 03, kita membahas format data JSON dan XML. Mengapa JSON lebih disukai dalam pengembangan aplikasi web modern dibandingkan XML?**
 
-<!-- JAWABAN IRA -->
+Perbandingannya paling terasa kalau melihat data yang sama dalam dua format. Satu proyek
+di JSON:
+
+    {"title": "Sortify", "thumbnail": "sortify-card.png"}
+
+Di XML, setiap nilai harus dibungkus tag pembuka dan penutup:
+
+    <field name="title">Sortify</field>
+    <field name="thumbnail">sortify-card.png</field>
+
+Alasan JSON lebih disukai:
+
+1. **Lebih ringkas.** Nama field ditulis sekali, tanpa tag penutup, sehingga ukuran data
+   lebih kecil dan lebih cepat dikirim.
+2. **Langsung cocok dengan struktur data.** Objek JSON menjadi `dict` di Python dan objek di
+   JavaScript, lengkap dengan tipe angka, boolean, `null`, dan array. Di XML semua nilai
+   berupa teks, dan program harus menelusuri pohon elemennya lalu mengubah tipenya sendiri.
+3. **Didukung langsung oleh browser.** Aplikasi web modern mengambil data lewat JavaScript,
+   dan `fetch().then(r => r.json())` sudah cukup untuk membacanya, tanpa library tambahan.
+4. **Menjadi standar REST API**, sehingga hampir semua layanan dan library sudah
+   memakainya.
+
+XML tetap punya tempat, misalnya dokumen yang perlu atribut, namespace, atau skema yang
+ketat, seperti SVG, RSS, dan berkas dokumen perkantoran. Tetapi untuk bertukar data antara
+server dan browser, JSON jauh lebih praktis.
 
 **3. Jelaskan alur yang terjadi saat kamu menggunakan fungsi view untuk mengembalikan data portofoliomu dalam bentuk JSON. Mengapa kita perlu melakukan proses serialization pada model Django sebelum datanya dikembalikan?**
 
-<!-- JAWABAN IRA -->
+Contoh alurnya saat membuka `/api/projects/?title=sort`:
+
+1. `main/urls.py` mengarahkan alamat itu ke view `get_projects_json`.
+2. View membaca parameter `title` dari `request.GET`, lalu menyusun QuerySet
+   `Project.objects.all()` yang disaring dengan `title__icontains`.
+3. `serializers.serialize("json", projects)` menjalankan query ke basis data, lalu mengubah
+   setiap objek `Project` menjadi struktur berisi `model`, `pk`, dan `fields`, dalam bentuk
+   teks JSON.
+4. Teks itu dikirim dengan `HttpResponse(..., content_type="application/json")`, sehingga
+   penerimanya tahu bahwa isinya JSON, bukan halaman HTML.
+
+Di proyek saya, halaman `/projects/` dan `/experience/` memakai JSON itu sendiri:
+`show_projects` memanggil `get_projects_json`, lalu mengubah JSON-nya kembali menjadi objek
+`Project` dengan `serializers.deserialize`. Ini meniru aplikasi yang frontend dan
+backend-nya terpisah.
+
+**Serialization diperlukan** karena objek model hanya ada di memori program Python, sedangkan
+HTTP hanya bisa mengirim teks atau byte. Objek itu juga berisi tipe yang tidak dikenal JSON:
+`id` saya berupa `UUID` dan `ended_at` berupa `datetime`. Serializer mengubahnya menjadi
+string, misalnya tanggal menjadi `"2026-02-28T00:00:00Z"`, sehingga bisa dibaca bahasa apa
+pun. Deserialization melakukan kebalikannya, mengubah string itu kembali menjadi `UUID` dan
+`datetime`. Karena itulah template saya tetap bisa memanggil `experience.is_ongoing` dan
+`experience.get_category_display` pada data yang datang dari JSON.
 
 ---
 
@@ -596,6 +670,8 @@ menjadi fitur mode pemilik.
   halaman 403) sesuai permintaan saya.
 - Menulis 24 unit test baru, sehingga total menjadi 34 test.
 - Memperbarui README dan menyusun draf bagian AI disclosure ini.
+- Atas permintaan saya, menyusun draf jawaban pertanyaan reflektif Tugas 3 dengan contoh
+  dari kode proyek saya.
 
 #### Bagian yang saya kerjakan sendiri
 
@@ -605,7 +681,8 @@ menjadi fitur mode pemilik.
   boleh mengubahnya.
 - Memeriksa Project Environment Variables di PWS, mengatur `OWNER_SECRET`, menjalankan push,
   merge, dan deploy, serta mengisi ulang data portofolio di PWS lewat form.
-- Menulis jawaban pertanyaan reflektif Tugas 3.
+- Membaca dan menyunting draf jawaban pertanyaan reflektif Tugas 3, dan memastikan setiap
+  contohnya cocok dengan kode dan test di proyek saya.
 
 #### Keterbatasan AI yang saya temukan
 
