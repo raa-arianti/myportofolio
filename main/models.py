@@ -1,4 +1,6 @@
 import uuid
+
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -41,6 +43,11 @@ class Project(models.Model):
         help_text="Nama file di static/img/projects/, misalnya sortify-card.png",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    # Satu proyek bisa di-star banyak pengguna, dan satu pengguna bisa mem-star
+    # banyak proyek, jadi relasinya many to many.
+    starred_by = models.ManyToManyField(
+        User, related_name="starred_projects", blank=True
+    )
 
     class Meta:
         ordering = ["created_at"]

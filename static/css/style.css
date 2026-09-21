@@ -813,6 +813,44 @@ html {
     border-color: #b42318;
 }
 
+/* --- Tombol star di dalam lapisan pink kartu proyek. --- */
+.star-form {
+    margin-top: 0.75rem;
+}
+
+.button-star {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--accent-dark);
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--accent-dark);
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.button-star:hover,
+.button-star.is-starred {
+    background-color: var(--accent-dark);
+    color: var(--paper);
+}
+
+.star-count {
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background-color: rgba(160, 90, 118, 0.15);
+    font-size: 0.75rem;
+}
+
+.button-star.is-starred .star-count,
+.button-star:hover .star-count {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
 /* --- Dialog konfirmasi hapus. Elemen popover tampil di "top layer" browser,
        jadi tidak ikut terpotong overflow: hidden milik kartu. --- */
 .delete-modal {

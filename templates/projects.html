@@ -39,6 +39,7 @@
                             <div class="work-body">
                                 <h2>{{ project.title }}</h2>
                                 <p>{{ project.description }}</p>
+                                {% include "components/project_star.html" with project=project %}
                             </div>
                             {% if user.is_superuser %}
                                 {% url 'main:edit_project' project.id as edit_url %}

@@ -365,3 +365,38 @@ class AuthorizationTest(TestCase):
 
         self.client.force_login(self.owner)
         self.assertContains(self.client.get(reverse("main:show_projects")), "Add project")
+
+
+class StarTest(TestCase):
+    """Bagian 3 Tutorial 04: pengguna terdaftar boleh memberi dan membatalkan star."""
+
+    def setUp(self):
+        self.member = User.objects.create_user("pengunjung", password="kataSandi!2026")
+        self.project = Project.objects.create(
+            title="Sortify", description="Waste sorting.", thumbnail="sortify-card.png"
+        )
+        self.star_url = reverse("main:toggle_star", args=[self.project.id])
+
+    def test_visitor_is_redirected_to_login(self):
+        self.assertRedirects(
+            self.client.post(self.star_url), f"/login/?next={self.star_url}"
+        )
+        self.assertEqual(self.project.starred_by.count(), 0)
+
+    def test_member_can_star_and_unstar(self):
+        self.client.force_login(self.member)
+        self.client.post(self.star_url)
+        self.assertIn(self.member, self.project.starred_by.all())
+
+        self.client.post(self.star_url)
+        self.assertNotIn(self.member, self.project.starred_by.all())
+
+    def test_get_request_does_not_change_stars(self):
+        self.client.force_login(self.member)
+        self.client.get(self.star_url)
+        self.assertEqual(self.project.starred_by.count(), 0)
+
+    def test_json_shows_usernames_instead_of_ids(self):
+        self.project.starred_by.add(self.member)
+        data = json.loads(self.client.get(reverse("main:get_projects_json")).content)
+        self.assertEqual(data[0]["fields"]["starred_by"], [["pengunjung"]])
