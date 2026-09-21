@@ -156,6 +156,13 @@ h1, h2, h3, .brand {
     line-height: 1.6;
 }
 
+.last-login {
+    margin-top: 1rem;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
 /* Kartu foto. SENGAJA tanpa overflow: hidden, karena kepala di foto memang
    menyembul melewati tepi atas kartu sesuai rancangan. */
 .hero-photo {

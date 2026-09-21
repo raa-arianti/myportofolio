@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -17,7 +19,10 @@ from main.owner import SESSION_KEY, is_owner, owner_lock_enabled, owner_required
 
 
 def show_main(request):
+    # Cookie last_login dikirim browser di setiap request setelah login.
+    last_login = request.COOKIES.get("last_login", "Belum ada sesi login")
     context = {
+        "last_login": last_login,
         "nickname": "Ira",
         "npm": "2506551775",
         "role": "CS Student at Universitas Indonesia",
@@ -224,11 +229,17 @@ def login_user(request):
     form = AuthenticationForm(request, data=request.POST or None)
     if request.method == "POST" and form.is_valid():
         login(request, form.get_user())
-        return redirect("main:show_main")
+        response = redirect("main:show_main")
+        response.set_cookie(
+            "last_login", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        return response
 
     return render(request, "login.html", {"form": form})
 
 
 def logout_user(request):
     logout(request)
-    return redirect("main:show_main")
+    response = redirect("main:show_main")
+    response.delete_cookie("last_login")
+    return response
