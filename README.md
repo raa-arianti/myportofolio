@@ -41,19 +41,24 @@ JSON tersebut. Semua halaman memakai kerangka `base.html` yang sama.
 | Ubah dan hapus proyek | `/projects/<id>/edit/`, `/projects/<id>/delete/` |
 | Tambah experience | `/experience/add/` |
 | Ubah dan hapus experience | `/experience/<id>/edit/`, `/experience/<id>/delete/` |
+| Beri atau batalkan star proyek | `/projects/<id>/star/` |
 | Data JSON | `/api/projects/` (mendukung `?title=`), `/api/experience/` |
-| Masuk mode pemilik | `/owner/` |
+| Daftar akun, login, logout | `/register/`, `/login/`, `/logout/` |
 
-### Mode pemilik
+### Peran pengguna
 
-Karena belum ada login, fitur tambah, ubah, dan hapus dikunci dengan environment variable
-`OWNER_SECRET`. Pengunjung tidak melihat tombol apa pun, dan membuka URL form secara
-langsung menghasilkan halaman **403**. Pemilik membuka `/owner/`, memasukkan kata sandi,
-lalu semua tombol muncul sampai ia keluar.
+Sejak Tutorial 04, situs memakai sistem akun bawaan Django. Halaman portofolio tetap bisa
+dibaca tanpa akun, dan yang dibatasi hanya bagian yang menulis ke basis data.
 
-Kalau `OWNER_SECRET` **tidak diatur**, kunci dinonaktifkan dan semua fitur form terbuka.
-Ini disengaja supaya asisten dosen yang menjalankan proyek di laptopnya tetap bisa menguji
-seluruh fitur tanpa perlu kata sandi.
+| Peran | Melihat portofolio | Memberi star | Menambah, mengubah, menghapus |
+|---|---|---|---|
+| Pengunjung (belum login) | Bisa | Tidak | Tidak |
+| Pengguna terdaftar | Bisa | Bisa | Tidak |
+| Pemilik portofolio (superuser) | Bisa | Bisa | Bisa |
+
+Pengunjung yang membuka URL form langsung diarahkan ke `/login/`, sedangkan pengguna yang
+sudah login tetapi bukan pemilik mendapat halaman **403**. Tombolnya juga disembunyikan
+dengan `{% if user.is_superuser %}`.
 
 ## Teknologi
 
@@ -75,7 +80,6 @@ myportofolio/
 │   ├── forms.py             # ProjectForm dan ExperienceForm (ModelForm)
 │   ├── views.py             # halaman, form, endpoint JSON, dan mode pemilik
 │   ├── urls.py              # named route aplikasi (namespace "main")
-│   ├── owner.py             # kunci mode pemilik (OWNER_SECRET)
 │   ├── context_processors.py  # data yang dibutuhkan base.html di semua halaman
 │   ├── tests.py             # unit test
 │   └── migrations/          # riwayat perubahan skema basis data
@@ -85,10 +89,12 @@ myportofolio/
 │   ├── experience.html      # daftar pengalaman
 │   ├── projects.html        # daftar proyek dengan pencarian
 │   ├── entry_form.html      # satu halaman form untuk tambah dan ubah data
-│   ├── owner_login.html     # masuk mode pemilik
+│   ├── register.html        # daftar akun
+│   ├── login.html           # login
 │   ├── 403.html             # halaman untuk pengunjung yang bukan pemilik
 │   └── components/
-│       └── owner_actions.html  # tombol Edit, Delete, dan dialog konfirmasi
+│       ├── owner_actions.html  # tombol Edit, Delete, dan dialog konfirmasi
+│       └── project_star.html   # tombol star proyek
 └── static/
     ├── css/style.css        # seluruh gaya halaman
     └── img/                 # foto, ilustrasi cat air, ikon, dan gambar proyek
@@ -111,13 +117,15 @@ pip install -r requirements.txt
 
 # 4. Buat berkas .env di root proyek, isi dengan:
 #    PRODUCTION=False
-#    OWNER_SECRET=          (kosongkan agar semua fitur form terbuka saat dicoba lokal)
 
 # 5. Jalankan migrasi dan server
 python manage.py migrate
 python manage.py runserver
 
-# 6. Jalankan unit test (matikan server dulu dengan Ctrl+C)
+# 6. Buat akun pemilik portofolio (hanya superuser yang boleh mengubah isi situs)
+python manage.py createsuperuser
+
+# 7. Jalankan unit test (matikan server dulu dengan Ctrl+C)
 python manage.py test main
 ```
 
@@ -128,7 +136,7 @@ ditambahkan lewat tombol **Add project** dan **Add experience**.
 
 Di PWS, `PRODUCTION=True` membuat Django memakai PostgreSQL dari variabel `DB_NAME`,
 `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, dan `SCHEMA`, sehingga data tidak hilang
-setiap kali deploy. `OWNER_SECRET` diatur di Project Environment Variables PWS.
+setiap kali deploy.
 
 ---
 
@@ -177,6 +185,14 @@ endpoint `/api/experience/` yang dipakai untuk merender halaman experience. Seba
 tambahan: proyek juga bisa diubah, satu halaman form dan satu komponen aksi dipakai bersama,
 PWS kini memakai PostgreSQL agar data tidak hilang saat deploy, dan **mode pemilik** membuat
 hanya pemilik yang dapat menambah, mengubah, dan menghapus konten.
+
+### Tutorial 04, Autentikasi, Session, dan Cookie
+Menambahkan halaman daftar akun, login, dan logout memakai `UserCreationForm` serta
+`AuthenticationForm`, status login di navbar, dan cookie `last_login` yang ditampilkan di
+halaman profil lalu dihapus saat logout. Semua view yang mengubah data kini dilindungi
+`@login_required` dan pemeriksaan `is_superuser`, menggantikan kunci `OWNER_SECRET` dari
+Tugas 3. Pengguna terdaftar bisa memberi star pada proyek lewat `ManyToManyField`, dan
+endpoint JSON memakai `use_natural_foreign_keys` agar menampilkan username.
 
 ---
 
@@ -698,3 +714,41 @@ dijalankan ke basis data yang berisi data asli.
 Tugas 1 dan Tugas 2, tidak ada yang menyadari bahwa PWS tidak memakai PostgreSQL. Hal ini
 baru ketahuan ketika saya meminta agar data tampil permanen di PWS, dan AI membaca ulang
 `settings.py` untuk mencari tahu kenapa data di sana selalu kosong.
+
+### Tutorial 04
+
+#### Tools
+
+**Claude (model Opus 5) melalui Claude Code** di aplikasi desktop, 22 September 2026.
+
+#### Strategi prompting
+
+Saya meminta AI menjelaskan dulu rencana perubahannya dan menunggu persetujuan saya sebelum
+menyentuh kode. AI sempat mengusulkan mempertahankan mode pemilik buatan Tugas 3 dan
+menggabungkannya dengan sistem akun Django, tetapi saya memutuskan untuk **mengikuti
+tutorial apa adanya**. Kode mode pemilik itu tidak hilang, karena masih tersimpan di branch
+`feat/individual-assignment-3` di GitHub dan bisa saya baca lagi kapan pun.
+
+#### Bagian yang dikerjakan AI
+
+- Menulis seluruh kode Tutorial 04 di branch `feat/tutorial-4`, satu commit per bagian:
+  autentikasi, cookie `last_login`, otorisasi berbasis `is_superuser`, dan fitur star.
+- Membuang kode mode pemilik lama beserta test-nya, lalu menyesuaikan test yang ada agar
+  login sebagai pemilik.
+- Menulis test baru untuk registrasi, login, logout, cookie, pembatasan akses, dan star,
+  sehingga total menjadi 41 test.
+- Memperbarui README ini.
+
+#### Bagian yang saya kerjakan sendiri
+
+- Memutuskan untuk mengikuti tutorial dan meninggalkan mode pemilik buatan sendiri.
+- Membuat akun superuser, menguji alur daftar, login, star, dan logout di browser, lalu
+  menjalankan push dan deploy.
+
+#### Keterbatasan AI yang saya temukan
+
+AI cenderung menawarkan solusi tambahan di luar yang diminta, misalnya menyimpan mekanisme
+lama atau menambah migrasi khusus agar akun pemilik bisa dibuat di PWS. Usulannya masuk akal
+secara teknis, tetapi membuat proyek menyimpang dari modul dan menambah kode yang perlu saya
+pahami dan jelaskan sendiri. Saya menahan hal itu dengan menegaskan bahwa tutorial diikuti
+apa adanya.
