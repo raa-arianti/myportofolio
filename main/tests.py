@@ -1,6 +1,7 @@
 import json
 
-from django.test import Client, TestCase, override_settings
+from django.contrib.auth.models import User
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -96,6 +97,9 @@ class ProjectFormAndApiTest(TestCase):
             description="Designing a simpler way to recognize waste.",
             thumbnail="sortify-card.png",
         )
+        # Semua form hanya boleh dipakai pemilik portofolio, jadi test ini login lebih dulu.
+        self.owner = User.objects.create_superuser("ira", password="owner-pass")
+        self.client.force_login(self.owner)
         self.create_url = reverse("main:create_project")
         self.json_url = reverse("main:get_projects_json")
         self.delete_url = reverse("main:delete_project", args=[self.project.id])
@@ -131,6 +135,7 @@ class ProjectFormAndApiTest(TestCase):
 
     def test_create_requires_csrf_token(self):
         csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.owner)
         response = csrf_client.post(
             self.create_url,
             {"title": "No token", "description": "Should fail.", "thumbnail": "sortify-card.png"},
@@ -166,70 +171,6 @@ class ProjectFormAndApiTest(TestCase):
         self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
 
 
-@override_settings(OWNER_SECRET="test-owner-secret")
-class OwnerModeTest(TestCase):
-    """Dengan OWNER_SECRET aktif, hanya sesi pemilik yang boleh menambah dan menghapus."""
-
-    def setUp(self):
-        self.project = Project.objects.create(
-            title="Sortify",
-            description="Designing a simpler way to recognize waste.",
-            thumbnail="sortify-card.png",
-        )
-        self.login_url = reverse("main:owner_login")
-        self.projects_url = reverse("main:show_projects")
-
-    def log_in(self):
-        return self.client.post(self.login_url, {"secret": "test-owner-secret"})
-
-    def test_visitor_does_not_see_owner_controls(self):
-        response = self.client.get(self.projects_url)
-        self.assertContains(response, self.project.title)
-        self.assertNotContains(response, "Add project")
-        self.assertNotContains(response, 'class="card-action"')
-        self.assertNotContains(response, "Owner mode")
-
-    def test_visitor_is_forbidden_from_protected_views(self):
-        response = self.client.get(reverse("main:create_project"))
-        self.assertEqual(response.status_code, 403)
-        self.assertTemplateUsed(response, "403.html")
-
-        response = self.client.post(reverse("main:delete_project", args=[self.project.id]))
-        self.assertEqual(response.status_code, 403)
-        self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
-
-    def test_wrong_secret_keeps_site_locked(self):
-        response = self.client.post(self.login_url, {"secret": "guess"})
-        self.assertContains(response, "That secret is not correct.")
-        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 403)
-
-    def test_correct_secret_unlocks_owner_controls(self):
-        self.assertRedirects(self.log_in(), self.projects_url)
-        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 200)
-
-        response = self.client.get(self.projects_url)
-        self.assertContains(response, "Add project")
-        self.assertContains(response, 'class="card-action"')
-        self.assertContains(response, "Owner mode")
-
-    def test_logout_locks_site_again(self):
-        self.log_in()
-        self.assertEqual(self.client.get(reverse("main:owner_logout")).status_code, 405)
-        self.client.post(reverse("main:owner_logout"))
-        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 403)
-
-
-class OwnerLockDisabledTest(TestCase):
-    """Tanpa OWNER_SECRET, kunci nonaktif sehingga fitur form bisa diuji siapa pun."""
-
-    @override_settings(OWNER_SECRET="")
-    def test_everyone_is_owner_without_secret(self):
-        self.assertEqual(self.client.get(reverse("main:create_project")).status_code, 200)
-        self.assertRedirects(
-            self.client.get(reverse("main:owner_login")), reverse("main:show_projects")
-        )
-
-
 class ExperienceCrudTest(TestCase):
     """Tugas 3: ExperienceForm, JSON experience, serta tambah, ubah, dan hapus experience."""
 
@@ -245,6 +186,9 @@ class ExperienceCrudTest(TestCase):
             category="internship",
             ended_at=timezone.make_aware(timezone.datetime(2025, 11, 30)),
         )
+        # Semua form hanya boleh dipakai pemilik portofolio, jadi test ini login lebih dulu.
+        self.owner = User.objects.create_superuser("ira", password="owner-pass")
+        self.client.force_login(self.owner)
 
     def test_experience_json_lists_ongoing_first(self):
         response = self.client.get(reverse("main:get_experience_json"))
@@ -322,14 +266,102 @@ class ExperienceCrudTest(TestCase):
         self.assertEqual(project.title, "Sortify v2")
         self.assertEqual(Project.objects.count(), 1)
 
-    @override_settings(OWNER_SECRET="test-owner-secret")
-    def test_experience_forms_are_owner_only(self):
-        urls = [
+
+class AuthTest(TestCase):
+    """Bagian 1 dan 2 Tutorial 04: register, login, logout, dan cookie last_login."""
+
+    def test_register_creates_account(self):
+        response = self.client.post(
+            reverse("main:register"),
+            {"username": "pengunjung", "password1": "kataSandi!2026", "password2": "kataSandi!2026"},
+        )
+        self.assertRedirects(response, reverse("main:login"))
+        self.assertTrue(User.objects.filter(username="pengunjung").exists())
+
+    def test_register_rejects_mismatched_passwords(self):
+        response = self.client.post(
+            reverse("main:register"),
+            {"username": "pengunjung", "password1": "kataSandi!2026", "password2": "beda!2026"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="pengunjung").exists())
+
+    def test_login_sets_session_and_last_login_cookie(self):
+        User.objects.create_user("pengunjung", password="kataSandi!2026")
+        response = self.client.post(
+            reverse("main:login"), {"username": "pengunjung", "password": "kataSandi!2026"}
+        )
+        self.assertRedirects(response, reverse("main:show_main"))
+        self.assertIn("last_login", response.cookies)
+        self.assertContains(self.client.get(reverse("main:show_main")), "Sesi terakhir login")
+
+    def test_login_with_wrong_password_shows_error(self):
+        User.objects.create_user("pengunjung", password="kataSandi!2026")
+        response = self.client.post(
+            reverse("main:login"), {"username": "pengunjung", "password": "salah"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    def test_navbar_shows_username_after_login(self):
+        user = User.objects.create_user("pengunjung", password="kataSandi!2026")
+        response = self.client.get(reverse("main:show_main"))
+        self.assertContains(response, "Register")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("main:show_main"))
+        self.assertContains(response, "pengunjung")
+        self.assertContains(response, "Logout")
+
+    def test_logout_clears_last_login_cookie(self):
+        user = User.objects.create_user("pengunjung", password="kataSandi!2026")
+        self.client.force_login(user)
+        response = self.client.get(reverse("main:logout"))
+        self.assertRedirects(response, reverse("main:show_main"))
+        self.assertEqual(response.cookies["last_login"].value, "")
+
+
+class AuthorizationTest(TestCase):
+    """Bagian 3 Tutorial 04: pengunjung, pengguna terdaftar, dan pemilik punya hak berbeda."""
+
+    def setUp(self):
+        self.owner = User.objects.create_superuser("ira", password="owner-pass")
+        self.member = User.objects.create_user("pengunjung", password="kataSandi!2026")
+        self.project = Project.objects.create(
+            title="Sortify", description="Waste sorting.", thumbnail="sortify-card.png"
+        )
+        self.protected_urls = [
+            reverse("main:create_project"),
+            reverse("main:edit_project", args=[self.project.id]),
+            reverse("main:delete_project", args=[self.project.id]),
             reverse("main:create_experience"),
-            reverse("main:edit_experience", args=[self.ongoing.id]),
-            reverse("main:delete_experience", args=[self.ongoing.id]),
         ]
-        for url in urls:
+
+    def test_visitor_is_redirected_to_login(self):
+        for url in self.protected_urls:
             with self.subTest(url=url):
-                self.assertEqual(self.client.post(url).status_code, 403)
-        self.assertEqual(Experience.objects.count(), 2)
+                response = self.client.get(url)
+                self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_registered_user_is_forbidden(self):
+        self.client.force_login(self.member)
+        for url in self.protected_urls:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
+
+    def test_owner_may_open_the_forms(self):
+        self.client.force_login(self.owner)
+        for url in self.protected_urls[:2]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_owner_controls_are_hidden_from_others(self):
+        response = self.client.get(reverse("main:show_projects"))
+        self.assertNotContains(response, "Add project")
+
+        self.client.force_login(self.member)
+        self.assertNotContains(self.client.get(reverse("main:show_projects")), "Add project")
+
+        self.client.force_login(self.owner)
+        self.assertContains(self.client.get(reverse("main:show_projects")), "Add project")

@@ -30,17 +30,6 @@
         </div>
     </header>
 
-    {# Hanya tampil bagi pemilik yang sudah masuk, dan hanya kalau kunci OWNER_SECRET aktif. #}
-    {% if owner_lock_enabled and is_owner %}
-        <div class="container owner-bar">
-            <span>Owner mode</span>
-            <form method="post" action="{% url 'main:owner_logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="owner-bar-logout">Log out</button>
-            </form>
-        </div>
-    {% endif %}
-
     {# Pesan sukses dari messages.success() di view, misalnya setelah menambah proyek. #}
     {% if messages %}
         <div class="container flash-messages" role="status">

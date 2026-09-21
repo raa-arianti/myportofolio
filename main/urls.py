@@ -11,8 +11,6 @@ from main.views import (
     login_user,
     logout_user,
     get_projects_json,
-    owner_login,
-    owner_logout,
     register,
     show_experience,
     show_main,
@@ -36,6 +34,4 @@ urlpatterns = [
     path("register/", register, name="register"),
     path("login/", login_user, name="login"),
     path("logout/", logout_user, name="logout"),
-    path("owner/", owner_login, name="owner_login"),
-    path("owner/logout/", owner_logout, name="owner_logout"),
 ]

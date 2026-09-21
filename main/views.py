@@ -2,7 +2,9 @@ import datetime
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.core.exceptions import PermissionDenied
 from django.core import serializers
 from django.db.models import F
 from django.http import HttpResponse
@@ -12,7 +14,6 @@ from django.views.decorators.http import require_POST
 
 from main.forms import ExperienceForm, ProjectForm
 from main.models import Experience, Project
-from main.owner import SESSION_KEY, is_owner, owner_lock_enabled, owner_required, secret_matches
 
 # name dan brand_name untuk navbar, footer, dan judul tab dikirim oleh
 # main.context_processors.site ke semua template, jadi view tidak perlu mengirimnya.
@@ -95,8 +96,12 @@ def render_entry_form(request, form, *, page_title, submit_label, cancel_url_nam
     return render(request, "entry_form.html", context)
 
 
-@owner_required
+@login_required(login_url="/login/")
 def create_project(request):
+    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
     form = ProjectForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -112,10 +117,14 @@ def create_project(request):
     )
 
 
-@owner_required
+@login_required(login_url="/login/")
 def edit_project(request, project_id):
     """Form ubah = form tambah yang diisi data lama lewat instance=project, lalu
     form.save() memperbarui baris yang sama, bukan membuat baris baru."""
+    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
     project = get_object_or_404(Project, pk=project_id)
     form = ProjectForm(request.POST or None, instance=project)
     if request.method == "POST" and form.is_valid():
@@ -132,10 +141,14 @@ def edit_project(request, project_id):
     )
 
 
-@owner_required
+@login_required(login_url="/login/")
 def delete_project(request, project_id):
     """Hapus proyek hanya lewat POST dari form konfirmasi. Request GET, misalnya
     karena alamatnya dibuka langsung, tidak menghapus apa pun."""
+    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
     project = get_object_or_404(Project, pk=project_id)
     if request.method == "POST":
         project.delete()
@@ -143,9 +156,12 @@ def delete_project(request, project_id):
     return redirect("main:show_projects")
 
 
-
-@owner_required
+@login_required(login_url="/login/")
 def create_experience(request):
+    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
     form = ExperienceForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -161,8 +177,12 @@ def create_experience(request):
     )
 
 
-@owner_required
+@login_required(login_url="/login/")
 def edit_experience(request, experience_id):
+    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
     experience = get_object_or_404(Experience, pk=experience_id)
     form = ExperienceForm(request.POST or None, instance=experience)
     if request.method == "POST" and form.is_valid():
@@ -179,39 +199,18 @@ def edit_experience(request, experience_id):
     )
 
 
-@owner_required
+@login_required(login_url="/login/")
 def delete_experience(request, experience_id):
     """Sama seperti delete_project: hanya POST yang menghapus."""
+    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
     experience = get_object_or_404(Experience, pk=experience_id)
     if request.method == "POST":
         experience.delete()
         messages.success(request, f"{experience.title} was deleted.")
     return redirect("main:show_experience")
-
-
-def owner_login(request):
-    """Halaman masuk mode pemilik. Tidak ditautkan dari mana pun, dibuka lewat /owner/."""
-    if not owner_lock_enabled() or is_owner(request):
-        return redirect("main:show_projects")
-
-    error = ""
-    if request.method == "POST":
-        if secret_matches(request.POST.get("secret", "")):
-            # Ganti ID sesi setelah berhasil masuk, supaya ID sesi lama tidak bisa dipakai ulang.
-            request.session.cycle_key()
-            request.session[SESSION_KEY] = True
-            messages.success(request, "Owner mode is on.")
-            return redirect("main:show_projects")
-        error = "That secret is not correct."
-
-    return render(request, "owner_login.html", {"error": error})
-
-
-@require_POST
-def owner_logout(request):
-    request.session.pop(SESSION_KEY, None)
-    messages.success(request, "Owner mode is off.")
-    return redirect("main:show_main")
 
 
 def register(request):

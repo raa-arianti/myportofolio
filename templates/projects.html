@@ -15,7 +15,7 @@
                         A collection of ideas, explorations, and things I&rsquo;ve built.
                         Each project is a small step in my learning journey.
                     </p>
-                    {% if is_owner %}
+                    {% if user.is_superuser %}
                         <a href="{% url 'main:create_project' %}" class="button projects-add">Add project</a>
                     {% endif %}
                 </header>
@@ -40,7 +40,7 @@
                                 <h2>{{ project.title }}</h2>
                                 <p>{{ project.description }}</p>
                             </div>
-                            {% if is_owner %}
+                            {% if user.is_superuser %}
                                 {% url 'main:edit_project' project.id as edit_url %}
                                 {% url 'main:delete_project' project.id as delete_url %}
                                 {% include "components/owner_actions.html" with item_id=project.id item_title=project.title item_kind="project" edit_url=edit_url delete_url=delete_url %}
