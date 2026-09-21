@@ -435,6 +435,19 @@ h1, h2, h3, .brand {
     border-left: 1px solid var(--line);
 }
 
+/* Username akun yang sedang login. Bukan tautan, jadi warnanya dibedakan. */
+.nav-user {
+    color: var(--accent-dark);
+    font-size: 0.95rem;
+}
+
+.form-switch {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
 /* Klik tautan navigasi menggulir halus, bukan melompat mendadak. */
 html {
     scroll-behavior: smooth;

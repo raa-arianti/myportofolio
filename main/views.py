@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core import serializers
 from django.db.models import F
 from django.http import HttpResponse
@@ -204,4 +206,29 @@ def owner_login(request):
 def owner_logout(request):
     request.session.pop(SESSION_KEY, None)
     messages.success(request, "Owner mode is off.")
+    return redirect("main:show_main")
+
+
+def register(request):
+    form = UserCreationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Akun berhasil dibuat. Silakan login.")
+        return redirect("main:login")
+
+    return render(request, "register.html", {"form": form})
+
+
+def login_user(request):
+    """Dinamai login_user supaya tidak menimpa fungsi login() yang diimpor di atas."""
+    form = AuthenticationForm(request, data=request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        login(request, form.get_user())
+        return redirect("main:show_main")
+
+    return render(request, "login.html", {"form": form})
+
+
+def logout_user(request):
+    logout(request)
     return redirect("main:show_main")
