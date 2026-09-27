@@ -42,6 +42,7 @@ JSON tersebut. Semua halaman memakai kerangka `base.html` yang sama.
 | Tambah experience | `/experience/add/` |
 | Ubah dan hapus experience | `/experience/<id>/edit/`, `/experience/<id>/delete/` |
 | Beri atau batalkan star proyek | `/projects/<id>/star/` |
+| Beri atau batalkan star experience | `/experience/<id>/star/` |
 | Data JSON | `/api/projects/` (mendukung `?title=`), `/api/experience/` |
 | Daftar akun, login, logout | `/register/`, `/login/`, `/logout/` |
 
@@ -50,11 +51,17 @@ JSON tersebut. Semua halaman memakai kerangka `base.html` yang sama.
 Sejak Tutorial 04, situs memakai sistem akun bawaan Django. Halaman portofolio tetap bisa
 dibaca tanpa akun, dan yang dibatasi hanya bagian yang menulis ke basis data.
 
-| Peran | Melihat portofolio | Memberi star | Menambah, mengubah, menghapus |
-|---|---|---|---|
-| Pengunjung (belum login) | Bisa | Tidak | Tidak |
-| Pengguna terdaftar | Bisa | Bisa | Tidak |
-| Pemilik portofolio (superuser) | Bisa | Bisa | Bisa |
+| Peran | Membaca | Memberi star | Mengubah | Menambah & menghapus |
+|---|---|---|---|---|
+| Pengunjung (belum login) | Bisa | Tidak, diarahkan ke login | Tidak | Tidak |
+| Pengguna terdaftar | Bisa | Bisa | Tidak | Tidak |
+| **Editor** | Bisa | Bisa | **Bisa** | Tidak |
+| Pemilik portofolio (superuser) | Bisa | Bisa | Bisa | Bisa |
+
+Peran **Editor** adalah grup Django bernama `Editor` yang dibuat lewat Django Admin
+(`/admin/auth/group/`), lalu akun tertentu dimasukkan ke grup itu. Pemeriksaannya ada di
+`main/roles.py` dan dipakai bersama oleh view (menolak request) dan template
+(menyembunyikan tombol), supaya keduanya tidak pernah berbeda aturan.
 
 Pengunjung yang membuka URL form langsung diarahkan ke `/login/`, sedangkan pengguna yang
 sudah login tetapi bukan pemilik mendapat halaman **403**. Tombolnya juga disembunyikan
@@ -80,6 +87,7 @@ myportofolio/
 │   ├── forms.py             # ProjectForm dan ExperienceForm (ModelForm)
 │   ├── views.py             # halaman, form, endpoint JSON, dan mode pemilik
 │   ├── urls.py              # named route aplikasi (namespace "main")
+│   ├── roles.py             # pemeriksaan peran Editor dan hak mengubah data
 │   ├── context_processors.py  # data yang dibutuhkan base.html di semua halaman
 │   ├── tests.py             # unit test
 │   └── migrations/          # riwayat perubahan skema basis data
@@ -94,7 +102,7 @@ myportofolio/
 │   ├── 403.html             # halaman untuk pengunjung yang bukan pemilik
 │   └── components/
 │       ├── owner_actions.html  # tombol Edit, Delete, dan dialog konfirmasi
-│       └── project_star.html   # tombol star proyek
+│       └── star_button.html    # tombol star, dipakai proyek dan experience
 └── static/
     ├── css/style.css        # seluruh gaya halaman
     └── img/                 # foto, ilustrasi cat air, ikon, dan gambar proyek
@@ -133,6 +141,10 @@ Halaman dapat diakses di http://localhost:8000/
 
 Halaman Experience dan Projects akan menampilkan pesan kosong sampai datanya
 ditambahkan lewat tombol **Add project** dan **Add experience**.
+
+Untuk mencoba peran Editor: buka `/admin/`, buat grup bernama `Editor`, lalu masukkan akun
+hasil registrasi ke grup tersebut. Akun itu akan melihat tombol **Edit** tetapi tidak melihat
+**Add** maupun **Delete**.
 
 Di PWS, `PRODUCTION=True` membuat Django memakai PostgreSQL dari variabel `DB_NAME`,
 `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, dan `SCHEMA`, sehingga data tidak hilang
@@ -193,6 +205,14 @@ halaman profil lalu dihapus saat logout. Semua view yang mengubah data kini dili
 `@login_required` dan pemeriksaan `is_superuser`, menggantikan kunci `OWNER_SECRET` dari
 Tugas 3. Pengguna terdaftar bisa memberi star pada proyek lewat `ManyToManyField`, dan
 endpoint JSON memakai `use_natural_foreign_keys` agar menampilkan username.
+
+### Tugas 4, Peran Editor dan star untuk Experience
+Menambahkan peran **Editor** lewat grup Django: Editor boleh mengubah data, tetapi menambah
+dan menghapus tetap hak pemilik. Aturannya ditulis sekali di `main/roles.py` lalu dipakai
+bersama oleh view dan template. Model `Experience` mendapat relasi `starred_by` beserta
+migrasinya, tombol star dipakai bersama oleh kartu proyek dan kartu experience, dan endpoint
+`/api/experience/` memakai `use_natural_foreign_keys` agar menampilkan username, bukan id
+pengguna. Ditambah delapan unit test baru untuk peran Editor dan star experience.
 
 ---
 
@@ -752,3 +772,48 @@ lama atau menambah migrasi khusus agar akun pemilik bisa dibuat di PWS. Usulanny
 secara teknis, tetapi membuat proyek menyimpang dari modul dan menambah kode yang perlu saya
 pahami dan jelaskan sendiri. Saya menahan hal itu dengan menegaskan bahwa tutorial diikuti
 apa adanya.
+
+### Tugas 4
+
+#### Tools
+
+**Claude (model Opus 5) melalui Claude Code** di aplikasi desktop, 28 September 2026.
+
+#### Strategi prompting
+
+Saya kembali ke cara kerja tugas-tugas sebelumnya: AI hanya menyediakan kode dan penjelasan,
+dan saya yang menempelkan serta menjalankan semuanya sendiri, satu tahap pada satu waktu.
+Setiap tahap saya minta diperiksa lebih dulu sebelum lanjut, dan pemeriksaan itu beberapa kali
+menangkap kesalahan saya, misalnya satu baris `is_superuser` di `edit_experience` yang lupa
+saya ganti sehingga Editor belum benar-benar bisa mengubah data.
+
+#### Bagian yang dibantu AI
+
+- Menyusun potongan kode untuk `main/roles.py`, pemeriksaan hak akses di view, rute dan view
+  star untuk experience, komponen tombol star yang dipakai bersama, serta pembagian tombol
+  Edit dan Delete berdasarkan peran.
+- Menulis delapan unit test baru untuk peran Editor dan star experience, dan mengujinya lebih
+  dulu di salinan proyek sebelum kodenya diberikan kepada saya.
+- Memeriksa keempat peran dengan merender halaman dan menembak URL yang dilindungi, lalu
+  merangkum hasilnya dalam bentuk tabel.
+- Memperbarui README ini.
+
+#### Bagian yang saya kerjakan sendiri
+
+- Menempel dan menjalankan seluruh kode, migrasi, test, dan commit.
+- Mengganti password akun pemilik, menjalankan push dan deploy.
+- Memutuskan pembagian hak akses yang dipakai, mengikuti tabel peran pada modul.
+
+#### Keterbatasan AI yang saya temukan
+
+**AI menghapus data asli saya untuk kedua kalinya.** Saat memeriksa peran pemilik, skrip
+pemeriksaan yang ditulis AI ikut mengirim permintaan hapus ke basis data lokal saya, dan
+karena pemilik memang berhak, satu experience benar-benar terhapus. AI memulihkannya dengan
+data yang sama, tetapi kejadian ini sama persis dengan kesalahan di Tutorial 03. Pelajarannya,
+kesalahan yang sudah pernah terjadi tidak otomatis tidak terulang hanya karena sudah
+disadari sekali. Pengujian yang mengubah data seharusnya selalu dijalankan di basis data test,
+bukan di basis data yang berisi data asli.
+
+Catatan kecil lain: grup `Editor` di laptop saya dibuat AI lewat shell, bukan lewat halaman
+Django Admin, karena AI tidak bisa login sebagai saya. Hasilnya sama, dan grupnya tetap dapat
+dilihat serta diubah dari `/admin/auth/group/`.
