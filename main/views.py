@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 
 from main.forms import ExperienceForm, ProjectForm
 from main.models import Experience, Project
+from main.roles import can_change_content
 
 # name dan brand_name untuk navbar, footer, dan judul tab dikirim oleh
 # main.context_processors.site ke semua template, jadi view tidak perlu mengirimnya.
@@ -43,7 +44,11 @@ def get_experience_json(request):
     experiences = Experience.objects.order_by(
         F("ended_at").desc(nulls_first=True), "started_at"
     )
-    experiences_json = serializers.serialize("json", experiences)
+    # use_natural_foreign_keys membuat daftar star tampil sebagai username,
+    # bukan id pengguna di basis data.
+    experiences_json = serializers.serialize(
+        "json", experiences, use_natural_foreign_keys=True
+    )
     return HttpResponse(experiences_json, content_type="application/json")
 
 
@@ -126,7 +131,7 @@ def edit_project(request, project_id):
     """Form ubah = form tambah yang diisi data lama lewat instance=project, lalu
     form.save() memperbarui baris yang sama, bukan membuat baris baru."""
     # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
-    if not request.user.is_superuser:
+    if not can_change_content(request.user):
         raise PermissionDenied
 
     project = get_object_or_404(Project, pk=project_id)
@@ -183,7 +188,7 @@ def create_experience(request):
 
 @login_required(login_url="/login/")
 def edit_experience(request, experience_id):
-    # Hanya pemilik portofolio (superuser) yang boleh mengubah isi situs.
+    # Mengubah data boleh dilakukan pemilik portofolio maupun Editor.
     if not request.user.is_superuser:
         raise PermissionDenied
 
