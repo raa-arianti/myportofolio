@@ -189,7 +189,7 @@ def create_experience(request):
 @login_required(login_url="/login/")
 def edit_experience(request, experience_id):
     # Mengubah data boleh dilakukan pemilik portofolio maupun Editor.
-    if not request.user.is_superuser:
+    if not can_change_content(request.user):
         raise PermissionDenied
 
     experience = get_object_or_404(Experience, pk=experience_id)
