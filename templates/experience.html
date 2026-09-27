@@ -33,7 +33,9 @@
                             {% else %}
                                 <p class="experience-status">Selesai &middot; {{ experience.ended_at|date:"M Y" }}</p>
                             {% endif %}
-                            {% if user.is_superuser %}
+                            {% url 'main:toggle_star_experience' experience.id as star_url %}
+                            {% include "components/star_button.html" with item=experience star_url=star_url %}
+                            {% if can_change_content %}
                                 {% url 'main:edit_experience' experience.id as edit_url %}
                                 {% url 'main:delete_experience' experience.id as delete_url %}
                                 {% include "components/owner_actions.html" with item_id=experience.id item_title=experience.title item_kind="experience" edit_url=edit_url delete_url=delete_url %}

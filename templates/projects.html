@@ -39,9 +39,10 @@
                             <div class="work-body">
                                 <h2>{{ project.title }}</h2>
                                 <p>{{ project.description }}</p>
-                                {% include "components/project_star.html" with project=project %}
+                                {% url 'main:toggle_star' project.id as star_url %}
+                                {% include "components/star_button.html" with item=project star_url=star_url %}
                             </div>
-                            {% if user.is_superuser %}
+                            {% if can_change_content %}
                                 {% url 'main:edit_project' project.id as edit_url %}
                                 {% url 'main:delete_project' project.id as delete_url %}
                                 {% include "components/owner_actions.html" with item_id=project.id item_title=project.title item_kind="project" edit_url=edit_url delete_url=delete_url %}

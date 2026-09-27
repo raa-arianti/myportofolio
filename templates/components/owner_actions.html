@@ -3,11 +3,16 @@
 {# item_id, item_title, item_kind ("project" atau "experience"), edit_url, delete_url. #}
 {# Dialog memakai atribut popover bawaan HTML, jadi tidak butuh JavaScript. #}
 <div class="card-actions">
-    <a href="{{ edit_url }}" class="card-action" aria-label="Edit {{ item_title }}">Edit</a>
-    <button type="button"
-            class="card-action card-action-danger"
-            popovertarget="delete-{{ item_id }}"
-            aria-label="Delete {{ item_title }}">Delete</button>
+    {# Mengubah data: pemilik atau Editor. Menghapus: pemilik saja. #}
+    {% if can_change_content %}
+        <a href="{{ edit_url }}" class="card-action" aria-label="Edit {{ item_title }}">Edit</a>
+    {% endif %}
+    {% if user.is_superuser %}
+        <button type="button"
+                class="card-action card-action-danger"
+                popovertarget="delete-{{ item_id }}"
+                aria-label="Delete {{ item_title }}">Delete</button>
+    {% endif %}
 </div>
 
 <div id="delete-{{ item_id }}"
