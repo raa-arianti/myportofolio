@@ -1,6 +1,6 @@
 import json
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -399,4 +399,93 @@ class StarTest(TestCase):
     def test_json_shows_usernames_instead_of_ids(self):
         self.project.starred_by.add(self.member)
         data = json.loads(self.client.get(reverse("main:get_projects_json")).content)
+        self.assertEqual(data[0]["fields"]["starred_by"], [["pengunjung"]])
+
+
+class EditorRoleTest(TestCase):
+    """Peran Editor: boleh mengubah data, tetapi tidak boleh menambah atau menghapus."""
+
+    def setUp(self):
+        self.editor = User.objects.create_user("editor", password="kataSandi!2026")
+        self.editor.groups.add(Group.objects.create(name="Editor"))
+        self.experience = Experience.objects.create(
+            title="MLOps Mentee", description="Belajar MLOps.", category="research"
+        )
+        self.project = Project.objects.create(
+            title="Sortify", description="Waste sorting.", thumbnail="sortify-card.png"
+        )
+        self.client.force_login(self.editor)
+
+    def test_editor_may_open_the_edit_forms(self):
+        for url in [
+            reverse("main:edit_experience", args=[self.experience.id]),
+            reverse("main:edit_project", args=[self.project.id]),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_editor_may_save_changes(self):
+        self.client.post(
+            reverse("main:edit_experience", args=[self.experience.id]),
+            {
+                "title": "MLOps Mentee - SISTECH",
+                "description": "Diperbarui editor.",
+                "category": "research",
+                "thumbnail": "",
+                "ended_at": "",
+            },
+        )
+        self.experience.refresh_from_db()
+        self.assertEqual(self.experience.title, "MLOps Mentee - SISTECH")
+
+    def test_editor_cannot_create_or_delete(self):
+        forbidden = [
+            reverse("main:create_experience"),
+            reverse("main:delete_experience", args=[self.experience.id]),
+            reverse("main:create_project"),
+            reverse("main:delete_project", args=[self.project.id]),
+        ]
+        for url in forbidden:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.post(url).status_code, 403)
+        self.assertTrue(Experience.objects.filter(pk=self.experience.id).exists())
+        self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
+
+    def test_editor_sees_edit_but_not_delete_or_add(self):
+        response = self.client.get(reverse("main:show_experience"))
+        self.assertContains(response, ">Edit</a>")
+        self.assertNotContains(response, "card-action-danger")
+        self.assertNotContains(response, "Add experience")
+
+
+class ExperienceStarTest(TestCase):
+    """Semua akun yang sudah login boleh memberi star pada experience."""
+
+    def setUp(self):
+        self.member = User.objects.create_user("pengunjung", password="kataSandi!2026")
+        self.experience = Experience.objects.create(
+            title="UI/UX Design Intern", description="Figma.", category="internship"
+        )
+        self.star_url = reverse("main:toggle_star_experience", args=[self.experience.id])
+
+    def test_visitor_is_redirected_to_login(self):
+        self.assertRedirects(self.client.post(self.star_url), f"/login/?next={self.star_url}")
+        self.assertEqual(self.experience.starred_by.count(), 0)
+
+    def test_member_can_star_and_unstar(self):
+        self.client.force_login(self.member)
+        self.client.post(self.star_url)
+        self.assertIn(self.member, self.experience.starred_by.all())
+
+        self.client.post(self.star_url)
+        self.assertNotIn(self.member, self.experience.starred_by.all())
+
+    def test_get_request_does_not_change_stars(self):
+        self.client.force_login(self.member)
+        self.client.get(self.star_url)
+        self.assertEqual(self.experience.starred_by.count(), 0)
+
+    def test_experience_json_shows_usernames(self):
+        self.experience.starred_by.add(self.member)
+        data = json.loads(self.client.get(reverse("main:get_experience_json")).content)
         self.assertEqual(data[0]["fields"]["starred_by"], [["pengunjung"]])
