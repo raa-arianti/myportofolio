@@ -264,3 +264,16 @@ def logout_user(request):
     response = redirect("main:show_main")
     response.delete_cookie("last_login")
     return response
+
+
+@login_required(login_url="/login/")
+def toggle_star_experience(request, experience_id):
+    """Sama seperti toggle_star milik proyek: semua akun yang sudah login boleh
+    memberi atau membatalkan star, dan hanya POST yang mengubah data."""
+    experience = get_object_or_404(Experience, pk=experience_id)
+    if request.method == "POST":
+        if request.user in experience.starred_by.all():
+            experience.starred_by.remove(request.user)
+        else:
+            experience.starred_by.add(request.user)
+    return redirect("main:show_experience")
