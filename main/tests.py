@@ -545,3 +545,31 @@ class AjaxCreateProjectTest(TestCase):
     def test_get_request_is_not_allowed(self):
         self.client.force_login(self.owner)
         self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_html_tags_are_stripped_from_text_fields(self):
+        self.client.force_login(self.owner)
+        self.client.post(
+            self.url,
+            {
+                "title": "Sortify <b>v2</b>",
+                "description": "Waste <i>sorting</i> app.",
+                "thumbnail": "sortify-card.png",
+            },
+        )
+        project = Project.objects.get()
+        self.assertEqual(project.title, "Sortify v2")
+        self.assertEqual(project.description, "Waste sorting app.")
+
+    def test_title_made_only_of_tags_is_rejected(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "title": '<img src="x" onerror="alert(1)">',
+                "description": "Payload.",
+                "thumbnail": "sortify-card.png",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.json()["errors"])
+        self.assertFalse(Project.objects.exists())

@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.staticfiles import finders
+from django.utils.html import strip_tags
 
 from main.models import Experience, Project
 
@@ -23,6 +24,20 @@ class ProjectForm(forms.ModelForm):
             ),
             "thumbnail": forms.TextInput(attrs={"placeholder": "sortify-card.png"}),
         }
+
+    def clean_title(self):
+        """Lapis kedua pertahanan XSS: tag HTML dibuang sejak data masuk. Pertahanan
+        utamanya tetap escapeHtml saat kartu dirakit di browser."""
+        title = strip_tags(self.cleaned_data["title"]).strip()
+        if not title:
+            raise forms.ValidationError("The title cannot contain only HTML tags.")
+        return title
+
+    def clean_description(self):
+        description = strip_tags(self.cleaned_data["description"]).strip()
+        if not description:
+            raise forms.ValidationError("The description cannot contain only HTML tags.")
+        return description
 
     def clean_thumbnail(self):
         """Tolak nama file yang tidak ada, supaya kartu tidak tampil dengan gambar rusak."""
