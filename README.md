@@ -35,9 +35,14 @@ Sejak Tutorial 03 dan Tugas 3, proyek dan experience dapat **ditambah, diubah, d
 lewat form, datanya juga tersedia dalam **format JSON**, dan halaman daftarnya dirender dari
 JSON tersebut. Semua halaman memakai kerangka `base.html` yang sama.
 
+Sejak Tutorial 05, halaman **Projects** bekerja tanpa memuat ulang halaman: daftar proyek
+diambil browser lewat **AJAX** ke `/api/projects/`, pencarian berjalan sambil mengetik dengan
+**debounce**, dan proyek baru dikirim dari **modal** lewat `fetch` lalu dikabarkan dengan
+notifikasi **toast**.
+
 | Fitur | URL |
 |---|---|
-| Tambah proyek | `/projects/add/` |
+| Tambah proyek | `/projects/add/` (halaman) dan `/projects/add-ajax/` (dikirim lewat fetch) |
 | Ubah dan hapus proyek | `/projects/<id>/edit/`, `/projects/<id>/delete/` |
 | Tambah experience | `/experience/add/` |
 | Ubah dan hapus experience | `/experience/<id>/edit/`, `/experience/<id>/delete/` |
@@ -102,9 +107,12 @@ myportofolio/
 │   ├── 403.html             # halaman untuk pengunjung yang bukan pemilik
 │   └── components/
 │       ├── owner_actions.html  # tombol Edit, Delete, dan dialog konfirmasi
-│       └── star_button.html    # tombol star, dipakai proyek dan experience
+│       ├── star_button.html    # tombol star, dipakai proyek dan experience
+│       ├── project_form_modal.html  # modal tambah proyek
+│       └── toast.html         # notifikasi singkat, disertakan base.html
 └── static/
     ├── css/style.css        # seluruh gaya halaman
+    ├── js/toast.js          # fungsi showToast untuk notifikasi
     └── img/                 # foto, ilustrasi cat air, ikon, dan gambar proyek
 </pre>
 
@@ -213,6 +221,17 @@ bersama oleh view dan template. Model `Experience` mendapat relasi `starred_by` 
 migrasinya, tombol star dipakai bersama oleh kartu proyek dan kartu experience, dan endpoint
 `/api/experience/` memakai `use_natural_foreign_keys` agar menampilkan username, bukan id
 pengguna. Ditambah delapan unit test baru untuk peran Editor dan star experience.
+
+### Tutorial 05, Interaktivitas dengan JavaScript
+Halaman Projects kini memuat kerangkanya lebih dulu, lalu mengambil datanya sendiri lewat AJAX
+ke `/api/projects/`. Endpoint itu merakit JSON secara manual agar bisa menyertakan `star_count`,
+`is_starred`, dan `starred_by_names` sesuai akun yang sedang login. Pencarian dijalankan sambil
+mengetik dengan jeda 300 milidetik (debounce), dan `AbortController` membatalkan permintaan lama
+supaya hasilnya tidak saling menimpa. Proyek baru ditambahkan dari modal lewat `fetch` ke
+`/projects/add-ajax/` dengan header `X-CSRFToken`, hasilnya dikabarkan lewat komponen toast, dan
+daftarnya langsung diperbarui tanpa reload. Karena kartu kini dirakit di browser, auto-escaping
+Django tidak lagi berlaku, sehingga setiap nilai dibungkus `escapeHtml` dan `ProjectForm`
+membuang tag HTML lewat `strip_tags` sebagai lapisan kedua.
 
 ---
 
@@ -817,3 +836,48 @@ bukan di basis data yang berisi data asli.
 Catatan kecil lain: grup `Editor` di laptop saya dibuat AI lewat shell, bukan lewat halaman
 Django Admin, karena AI tidak bisa login sebagai saya. Hasilnya sama, dan grupnya tetap dapat
 dilihat serta diubah dari `/admin/auth/group/`.
+
+### Tutorial 05
+
+#### Tools
+
+**Claude (model Opus 5) melalui Claude Code** di aplikasi desktop, 30 September 2026.
+
+#### Strategi prompting
+
+Karena pekan ini saya sedang menumpuk tugas lain, saya meminta AI mengerjakan Tutorial 05 sampai
+selesai, dengan syarat setiap tahap diuji lebih dulu dan riwayat commit tetap bertahap agar saya
+bisa menelusuri perubahannya ketika sempat membaca ulang. Push dan pengumpulan tetap saya
+lakukan sendiri.
+
+#### Bagian yang dikerjakan AI
+
+- Komponen toast (`templates/components/toast.html`, `static/js/toast.js`, dan gayanya) yang
+  disertakan di `base.html`.
+- Mengubah `get_projects_json` agar merakit JSON sendiri beserta status star per pengguna, lalu
+  menyederhanakan `show_projects` menjadi pengirim kerangka halaman saja.
+- Skrip AJAX pada halaman Projects: `fetch`, perakitan kartu, status loading, error, dan kosong,
+  pencarian dengan debounce, serta `AbortController`.
+- Modal tambah proyek dan `create_project_ajax`, termasuk pengiriman `FormData` dengan header
+  `X-CSRFToken` dan umpan balik lewat toast.
+- Perlindungan XSS: `escapeHtml` di sisi browser dan `clean_title` serta `clean_description`
+  dengan `strip_tags` di sisi server.
+- Menyesuaikan unit test yang terdampak dan menambah enam test baru, sehingga total menjadi 56.
+- Memperbarui README ini.
+
+#### Bagian yang saya kerjakan sendiri
+
+- Menentukan cara kerja ini dan batasannya, menjalankan push, deploy, dan pengumpulan.
+- Memeriksa hasilnya di browser setelah bangun, dan memutuskan apa yang perlu diperbaiki.
+
+#### Keterbatasan AI yang saya temukan
+
+Karena saya tidak menempel kodenya sendiri pekan ini, saya kehilangan pemeriksaan alami yang
+biasanya terjadi saat mengetik ulang setiap baris. Pada pekan-pekan sebelumnya, justru dari
+proses itulah saya menemukan kesalahan AI, misalnya satu baris `is_superuser` yang lupa diganti
+di Tugas 4. Karena itu saya mencatat bahwa hasil pekan ini perlu saya baca ulang sendiri, bukan
+sekadar dipercaya karena test-nya hijau.
+
+Catatan teknis yang juga perlu diingat: AI tidak bisa login ke akun saya, jadi tampilan modal
+tambah proyek dan toast setelah berhasil menyimpan belum pernah dilihat langsung di browser.
+Bagian itu baru terbukti lewat unit test dan pengecekan fungsi di konsol browser.
