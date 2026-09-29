@@ -1070,3 +1070,66 @@ html {
         scroll-behavior: auto;
     }
 }
+
+/* ==========================================================================
+   TOAST DAN UTILITAS
+   Notifikasi singkat untuk umpan balik AJAX (Tutorial 05).
+   ========================================================================== */
+
+.hide {
+    display: none !important;
+}
+
+.toast-component {
+    position: fixed;
+    inset: auto 2rem 2rem auto;
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    padding: 1rem 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: var(--paper);
+    box-shadow: 0 10px 25px rgba(26, 26, 26, 0.15);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-component:popover-open {
+    display: flex;
+}
+
+.toast-hidden {
+    opacity: 0;
+    transform: translateY(150%);
+    pointer-events: none;
+}
+
+.toast-show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-title {
+    margin-bottom: 0.15rem;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.toast-message {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Garis tepi kiri menandai jenis notifikasi. */
+.toast-success { border-left: 4px solid #22c55e; }
+.toast-error { border-left: 4px solid #b42318; }
+.toast-normal { border-left: 4px solid var(--accent-dark); }
+
+@media (max-width: 600px) {
+    .toast-component {
+        inset: auto 1rem 1rem 1rem;
+    }
+}
