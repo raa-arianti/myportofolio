@@ -7,7 +7,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.exceptions import PermissionDenied
 from django.core import serializers
 from django.db.models import F
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -66,29 +66,39 @@ def show_experience(request):
 
 
 def get_projects_json(request):
-    """Kirim data proyek sebagai JSON. ?title=... menyaring berdasarkan judul."""
+    """Kirim data proyek sebagai JSON. ?title=... menyaring berdasarkan judul.
+
+    JSON dirakit manual, bukan lewat serializers.serialize, karena status star
+    bergantung pada akun yang sedang login dan serializer bawaan tidak
+    mengetahuinya. Hanya username yang dikirim, bukan id pengguna."""
     title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.all()
+    projects = Project.objects.prefetch_related("starred_by").all()
     if title_query:
         projects = projects.filter(title__icontains=title_query)
-    # use_natural_foreign_keys membuat daftar star tampil sebagai username,
-    # bukan id pengguna di basis data.
-    projects_json = serializers.serialize(
-        "json", projects, use_natural_foreign_keys=True
-    )
-    return HttpResponse(projects_json, content_type="application/json")
+
+    data = []
+    for project in projects:
+        starred_users = list(project.starred_by.all())
+        data.append(
+            {
+                "pk": str(project.id),
+                "fields": {
+                    "title": project.title,
+                    "description": project.description,
+                    "thumbnail": project.thumbnail,
+                    "star_count": len(starred_users),
+                    "is_starred": request.user in starred_users,
+                    "starred_by_names": ", ".join(user.username for user in starred_users),
+                },
+            }
+        )
+    return JsonResponse(data, safe=False)
 
 
 def show_projects(request):
-    """Halaman proyek tidak membaca basis data langsung: datanya diambil dari JSON
-    get_projects_json, lalu di-deserialize kembali menjadi objek Project."""
-    json_response = get_projects_json(request)
-    project_list = [
-        item.object
-        for item in serializers.deserialize("json", json_response.content.decode("utf-8"))
-    ]
+    """Halaman ini hanya mengirim kerangkanya. Daftar proyeknya diambil browser
+    sendiri lewat AJAX ke get_projects_json."""
     context = {
-        "project_list": project_list,
         "title_query": request.GET.get("title", "").strip(),
     }
     return render(request, "projects.html", context)

@@ -772,6 +772,11 @@ html {
     gap: 0.4rem;
 }
 
+/* Tombol hapus di kartu proyek dibungkus <form> oleh JavaScript. */
+.card-actions form {
+    display: inline-flex;
+}
+
 .work-card .card-actions {
     position: absolute;
     top: 0.75rem;

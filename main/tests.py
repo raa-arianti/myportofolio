@@ -69,12 +69,18 @@ class ProjectPageTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "projects.html")
 
-    def test_project_data_is_displayed(self):
+    def test_page_ships_the_grid_that_javascript_fills(self):
+        """Sejak Tutorial 05 kartunya dirakit browser, jadi halaman hanya berisi wadahnya."""
         response = self.client.get(self.url)
-        self.assertContains(response, self.project.title)
-        self.assertContains(response, self.project.description)
-        self.assertContains(response, 'src="/static/img/projects/sortify-card.png"')
-        self.assertNotContains(response, "No projects have been added yet.")
+        self.assertContains(response, 'id="grid"')
+        self.assertContains(response, reverse("main:get_projects_json"))
+
+    def test_project_data_is_served_as_json(self):
+        data = json.loads(self.client.get(reverse("main:get_projects_json")).content)
+        self.assertEqual(
+            [item["fields"]["title"] for item in data], [self.project.title]
+        )
+        self.assertEqual(data[0]["fields"]["thumbnail"], "sortify-card.png")
 
     def test_empty_projects_page(self):
         Project.objects.all().delete()
@@ -148,18 +154,19 @@ class ProjectFormAndApiTest(TestCase):
         self.assertEqual(response["Content-Type"], "application/json")
         data = json.loads(response.content)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["model"], "main.project")
+        self.assertEqual(data[0]["pk"], str(self.project.id))
         self.assertEqual(data[0]["fields"]["title"], "Sortify")
+        self.assertEqual(data[0]["fields"]["star_count"], 0)
+        self.assertFalse(data[0]["fields"]["is_starred"])
 
     def test_projects_json_filters_by_title(self):
         Project.objects.create(title="Sheltra", description="Safety.", thumbnail="sheltra-card.png")
         data = json.loads(self.client.get(self.json_url, {"title": "shel"}).content)
         self.assertEqual([item["fields"]["title"] for item in data], ["Sheltra"])
 
-    def test_search_without_match_shows_message(self):
-        response = self.client.get(reverse("main:show_projects"), {"title": "zzz"})
-        self.assertNotContains(response, 'class="work-card"')
-        self.assertContains(response, "No projects match")
+    def test_search_without_match_returns_empty_json(self):
+        response = self.client.get(self.json_url, {"title": "zzz"})
+        self.assertEqual(json.loads(response.content), [])
 
     def test_delete_project_with_post(self):
         response = self.client.post(self.delete_url)
@@ -396,10 +403,17 @@ class StarTest(TestCase):
         self.client.get(self.star_url)
         self.assertEqual(self.project.starred_by.count(), 0)
 
-    def test_json_shows_usernames_instead_of_ids(self):
+    def test_json_shows_usernames_and_star_state(self):
         self.project.starred_by.add(self.member)
-        data = json.loads(self.client.get(reverse("main:get_projects_json")).content)
-        self.assertEqual(data[0]["fields"]["starred_by"], [["pengunjung"]])
+
+        anonymous = json.loads(self.client.get(reverse("main:get_projects_json")).content)
+        self.assertEqual(anonymous[0]["fields"]["starred_by_names"], "pengunjung")
+        self.assertEqual(anonymous[0]["fields"]["star_count"], 1)
+        self.assertFalse(anonymous[0]["fields"]["is_starred"])
+
+        self.client.force_login(self.member)
+        mine = json.loads(self.client.get(reverse("main:get_projects_json")).content)
+        self.assertTrue(mine[0]["fields"]["is_starred"])
 
 
 class EditorRoleTest(TestCase):
