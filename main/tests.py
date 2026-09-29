@@ -503,3 +503,45 @@ class ExperienceStarTest(TestCase):
         self.experience.starred_by.add(self.member)
         data = json.loads(self.client.get(reverse("main:get_experience_json")).content)
         self.assertEqual(data[0]["fields"]["starred_by"], [["pengunjung"]])
+
+
+class AjaxCreateProjectTest(TestCase):
+    """Tutorial 05: endpoint tambah proyek versi AJAX selalu menjawab dengan JSON."""
+
+    def setUp(self):
+        self.url = reverse("main:create_project_ajax")
+        self.valid_data = {
+            "title": "Sheltra",
+            "description": "A women's safety platform.",
+            "thumbnail": "sheltra-card.png",
+        }
+        self.owner = User.objects.create_superuser("ira", password="owner-pass")
+        self.member = User.objects.create_user("pengunjung", password="kataSandi!2026")
+
+    def test_owner_can_create_through_ajax(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(Project.objects.filter(title="Sheltra").exists())
+        self.assertEqual(response.json()["message"], "Project added successfully.")
+
+    def test_invalid_data_returns_field_errors(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self.url, {**self.valid_data, "title": ""})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.json()["errors"])
+        self.assertFalse(Project.objects.exists())
+
+    def test_visitor_and_member_get_json_403(self):
+        for user in [None, self.member]:
+            with self.subTest(user=user):
+                if user:
+                    self.client.force_login(user)
+                response = self.client.post(self.url, self.valid_data)
+                self.assertEqual(response.status_code, 403)
+                self.assertIn("message", response.json())
+        self.assertFalse(Project.objects.exists())
+
+    def test_get_request_is_not_allowed(self):
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(self.url).status_code, 405)

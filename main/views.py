@@ -97,9 +97,11 @@ def get_projects_json(request):
 
 def show_projects(request):
     """Halaman ini hanya mengirim kerangkanya. Daftar proyeknya diambil browser
-    sendiri lewat AJAX ke get_projects_json."""
+    sendiri lewat AJAX ke get_projects_json. ProjectForm kosong dikirim untuk
+    mengisi modal tambah proyek."""
     context = {
         "title_query": request.GET.get("title", "").strip(),
+        "form": ProjectForm(),
     }
     return render(request, "projects.html", context)
 
@@ -134,6 +136,29 @@ def create_project(request):
         submit_label="Add project",
         cancel_url_name="main:show_projects",
     )
+
+
+@require_POST
+def create_project_ajax(request):
+    """Versi AJAX dari create_project. Jawabannya selalu JSON supaya bisa dibaca fetch.
+
+    Tidak memakai @login_required karena dekorator itu membalas dengan redirect ke
+    halaman login, dan fetch akan mengikutinya lalu menerima HTML berstatus 200
+    sehingga JavaScript mengira permintaannya berhasil. AnonymousUser juga bernilai
+    False pada is_superuser, jadi satu pemeriksaan di bawah sudah menolak pengunjung
+    maupun pengguna biasa."""
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {"message": "Only the portfolio owner can add a project."}, status=403
+        )
+
+    form = ProjectForm(request.POST)
+    if form.is_valid():
+        project = form.save()
+        return JsonResponse(
+            {"message": "Project added successfully.", "pk": str(project.id)}, status=201
+        )
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
 @login_required(login_url="/login/")

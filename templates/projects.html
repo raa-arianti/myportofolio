@@ -16,7 +16,10 @@
                         Each project is a small step in my learning journey.
                     </p>
                     {% if user.is_superuser %}
-                        <a href="{% url 'main:create_project' %}" class="button projects-add">Add project</a>
+                        <button type="button" class="button projects-add" popovertarget="add-project-modal">
+                            <span aria-hidden="true">+</span>
+                            Add project
+                        </button>
                     {% endif %}
                 </header>
 
@@ -38,6 +41,10 @@
             </div>
         </section>
     </main>
+
+    {% if user.is_superuser %}
+        {% include "components/project_form_modal.html" %}
+    {% endif %}
 
     <script>
         // Alamat endpoint dan hak akses disiapkan Django, lalu dipakai JavaScript.
@@ -180,6 +187,66 @@
             clearTimeout(searchDebounceTimer);
             searchProjects();
         });
+
+        // --- Tambah proyek lewat AJAX -------------------------------------------------
+        const CREATE_PROJECT_ENDPOINT = "{% url 'main:create_project_ajax' %}";
+        const projectForm = document.getElementById("project-form");
+
+        function closeProjectModal() {
+            document.getElementById("add-project-modal").hidePopover();
+        }
+
+        // Token CSRF dibaca dari cookie lalu dikirim lewat header X-CSRFToken.
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== "") {
+                for (const rawCookie of document.cookie.split(";")) {
+                    const cookie = rawCookie.trim();
+                    if (cookie.startsWith(name + "=")) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function addProject(event) {
+            event.preventDefault();
+            const submitButton = projectForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true; // cegah proyek ganda karena klik berulang
+
+            try {
+                const response = await fetch(CREATE_PROJECT_ENDPOINT, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCookie("csrftoken") },
+                    body: new FormData(projectForm),
+                });
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    projectForm.reset();
+                    closeProjectModal();
+                    showToast("Saved", "The project was added successfully.", "success");
+                    fetchProjects(searchInput.value.trim());
+                } else {
+                    const messages = result.errors
+                        ? Object.values(result.errors).flat().map((error) => error.message)
+                        : [result.message || `Something went wrong (status ${response.status}).`];
+                    showToast("Could not add the project", messages.join(" "), "error");
+                }
+            } catch (error) {
+                console.error("Error adding project:", error);
+                showToast("Could not add the project", "The server did not respond. Please try again.", "error");
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        // Modal hanya ada untuk pemilik, jadi pengunjung lain tidak punya form ini.
+        if (projectForm) {
+            projectForm.addEventListener("submit", addProject);
+        }
 
         fetchProjects(searchInput.value.trim());
     </script>

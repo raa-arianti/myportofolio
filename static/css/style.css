@@ -858,7 +858,7 @@ html {
 
 /* --- Dialog konfirmasi hapus. Elemen popover tampil di "top layer" browser,
        jadi tidak ikut terpotong overflow: hidden milik kartu. --- */
-.delete-modal {
+.modal-layer {
     display: none;
     position: fixed;
     inset: 0;
@@ -874,11 +874,11 @@ html {
     justify-content: center;
 }
 
-.delete-modal:popover-open {
+.modal-layer:popover-open {
     display: flex;
 }
 
-.delete-modal-backdrop {
+.modal-backdrop {
     position: absolute;
     inset: 0;
     border: 0;
@@ -887,7 +887,7 @@ html {
     cursor: default;
 }
 
-.delete-modal-content {
+.modal-content {
     position: relative;
     width: min(100%, 460px);
     padding: 1.75rem;
@@ -897,16 +897,40 @@ html {
     box-shadow: 0 1rem 3rem rgba(26, 26, 26, 0.2);
 }
 
-.delete-modal-content h2 {
+.modal-content h2 {
     margin-bottom: 0.6rem;
     font-size: 1.5rem;
 }
 
-.delete-modal-actions {
+.modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
     margin-top: 1.5rem;
+}
+
+/* Modal berisi form butuh ruang lebih lebar daripada dialog konfirmasi. */
+.modal-content-wide {
+    width: min(100%, 640px);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+}
+
+.modal-content-wide h2 {
+    margin-right: 2.5rem;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
 }
 
 /* ==========================================================================
@@ -1032,22 +1056,22 @@ html {
         flex: 1;
     }
 
-    .delete-modal {
+    .modal-layer {
         align-items: flex-end;
         padding: 0;
     }
 
-    .delete-modal-content {
+    .modal-content {
         width: 100%;
         border-radius: var(--radius) var(--radius) 0 0;
     }
 
-    .delete-modal-actions {
+    .modal-actions {
         flex-direction: column-reverse;
     }
 
-    .delete-modal-actions form,
-    .delete-modal-actions .button {
+    .modal-actions form,
+    .modal-actions .button {
         width: 100%;
     }
 }

@@ -1,0 +1,48 @@
+{# Modal tambah proyek. Memakai atribut popover bawaan HTML, sama seperti dialog hapus, #}
+{# jadi tombol buka dan tutupnya tidak butuh JavaScript. Pengirimannya lewat AJAX. #}
+<div id="add-project-modal"
+     class="modal-layer"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="add-project-modal-title">
+    <button type="button"
+            class="modal-backdrop"
+            popovertarget="add-project-modal"
+            popovertargetaction="hide"
+            aria-label="Close the add project form"></button>
+
+    <div class="modal-content modal-content-wide">
+        <button type="button"
+                class="modal-close"
+                popovertarget="add-project-modal"
+                popovertargetaction="hide"
+                aria-label="Close the add project form">&times;</button>
+
+        <h2 id="add-project-modal-title">Add a new project</h2>
+
+        <form id="project-form" method="post" action="{% url 'main:create_project_ajax' %}" class="entry-form">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="form-help">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="form-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <div class="modal-actions">
+                <button type="button"
+                        class="button button-secondary"
+                        popovertarget="add-project-modal"
+                        popovertargetaction="hide">Cancel</button>
+                <button type="submit" class="button">Add project</button>
+            </div>
+        </form>
+    </div>
+</div>
