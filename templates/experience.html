@@ -14,40 +14,172 @@
                     <a href="{% url 'main:create_experience' %}" class="button experience-add">Add experience</a>
                 {% endif %}
 
-                <div class="experience-grid">
-                    {% for experience in experience_list %}
-                        <article class="experience-card">
-                            {% if experience.thumbnail %}
-                                <img class="experience-thumb" src="{{ experience.thumbnail }}"
-                                     alt="{{ experience.title }}">
-                            {% endif %}
-                            <span class="experience-category">
-                                {{ experience.get_category_display }}
-                            </span>
-                            <h2>{{ experience.title }}</h2>
-                            <p class="experience-description">
-                                {{ experience.description }}
-                            </p>
-                            {% if experience.is_ongoing %}
-                                <p class="experience-status">Sedang berlangsung</p>
-                            {% else %}
-                                <p class="experience-status">Selesai &middot; {{ experience.ended_at|date:"M Y" }}</p>
-                            {% endif %}
-                            {% url 'main:toggle_star_experience' experience.id as star_url %}
-                            {% include "components/star_button.html" with item=experience star_url=star_url %}
-                            {% if can_change_content %}
-                                {% url 'main:edit_experience' experience.id as edit_url %}
-                                {% url 'main:delete_experience' experience.id as delete_url %}
-                                {% include "components/owner_actions.html" with item_id=experience.id item_title=experience.title item_kind="experience" edit_url=edit_url delete_url=delete_url %}
-                            {% endif %}
-                        </article>
-                    {% empty %}
-                        <p class="empty-state">
-                            Belum ada pengalaman yang ditambahkan.
-                        </p>
-                    {% endfor %}
-                </div>
+                {# Tanpa method dan action: pencarian sepenuhnya ditangani JavaScript. #}
+                <form id="experience-search-form" class="projects-search experience-search" role="search">
+                    <input type="search" id="search-input" name="title" value="{{ title_query }}"
+                           class="projects-search-input"
+                           placeholder="Cari experience berdasarkan judul"
+                           aria-label="Cari experience berdasarkan judul">
+                    <button type="submit" class="button">Cari</button>
+                </form>
+
+                <p id="loading" class="empty-state hide">Memuat experience...</p>
+                <p id="error" class="empty-state hide">Experience gagal dimuat. Silakan coba lagi.</p>
+                <p id="empty" class="empty-state hide">Belum ada pengalaman yang ditambahkan.</p>
+
+                <div id="grid" class="experience-grid hide"></div>
             </div>
         </section>
     </main>
+    <script>
+        // Alamat endpoint dan hak akses disiapkan Django, lalu dipakai JavaScript.
+        const EXPERIENCE_ENDPOINT = "{% url 'main:get_experience_json' %}";
+        const DUMMY_UUID = "00000000-0000-0000-0000-000000000000";
+        const EDIT_URL_TEMPLATE = "{% url 'main:edit_experience' '00000000-0000-0000-0000-000000000000' %}";
+        const DELETE_URL_TEMPLATE = "{% url 'main:delete_experience' '00000000-0000-0000-0000-000000000000' %}";
+        const STAR_URL_TEMPLATE = "{% url 'main:toggle_star_experience' '00000000-0000-0000-0000-000000000000' %}";
+        const CAN_CHANGE_CONTENT = {{ can_change_content|yesno:"true,false" }};
+        const IS_SUPERUSER = {{ user.is_superuser|yesno:"true,false" }};
+        const CSRF_INPUT = `{% csrf_token %}`;
+        const SEARCH_DEBOUNCE_DELAY = 300;
+
+        let searchDebounceTimer;
+        let experienceAbortController;
+
+        const loadingState = document.getElementById("loading");
+        const errorState = document.getElementById("error");
+        const emptyState = document.getElementById("empty");
+        const gridContainer = document.getElementById("grid");
+        const searchForm = document.getElementById("experience-search-form");
+        const searchInput = document.getElementById("search-input");
+
+        // Hanya satu dari empat kondisi yang tampil: loading, error, kosong, atau grid.
+        function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+            loadingState.classList.toggle("hide", !showLoading);
+            errorState.classList.toggle("hide", !showError);
+            emptyState.classList.toggle("hide", !showEmpty);
+            gridContainer.classList.toggle("hide", !showGrid);
+        }
+
+        // "2025-11-30T00:00:00Z" menjadi "Nov 2025", sama seperti filter date:"M Y" di Django.
+        function formatEndedAt(isoString) {
+            return new Date(isoString).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+        }
+
+        // Setiap nilai teks dari server lewat escapeHtml (static/js/dom.js) sebelum
+        // disisipkan, karena innerHTML akan menjalankan tag apa pun yang lolos.
+        function buildExperienceCardElement(item) {
+            const experience = item.fields;
+            const article = document.createElement("article");
+            article.className = "experience-card";
+
+            const editUrl = EDIT_URL_TEMPLATE.replace(DUMMY_UUID, item.pk);
+            const deleteUrl = DELETE_URL_TEMPLATE.replace(DUMMY_UUID, item.pk);
+            const starUrl = STAR_URL_TEMPLATE.replace(DUMMY_UUID, item.pk);
+
+            const thumbHtml = experience.thumbnail
+                ? `<img class="experience-thumb" src="${escapeHtml(experience.thumbnail)}"
+                        alt="${escapeHtml(experience.title)}">`
+                : "";
+            const statusHtml = experience.ended_at
+                ? `Selesai &middot; ${escapeHtml(formatEndedAt(experience.ended_at))}`
+                : "Sedang berlangsung";
+            const starTitle = experience.star_count > 0
+                ? `Starred by ${escapeHtml(experience.starred_by_names)}`
+                : "Be the first to star this";
+
+            // Mengubah data: pemilik atau Editor. Menghapus: pemilik saja.
+            // Ini hanya soal tampilan; hak aksesnya tetap diperiksa lagi di view.
+            const editHtml = CAN_CHANGE_CONTENT
+                ? `<a href="${editUrl}" class="card-action">Edit</a>`
+                : "";
+            const deleteHtml = IS_SUPERUSER
+                ? `<form method="post" action="${deleteUrl}">
+                       ${CSRF_INPUT}
+                       <button type="submit" class="card-action card-action-danger"
+                               onclick="return confirm('Hapus experience ini?');">Delete</button>
+                   </form>`
+                : "";
+            const actionsHtml = editHtml || deleteHtml
+                ? `<div class="card-actions">${editHtml}${deleteHtml}</div>`
+                : "";
+
+            article.innerHTML = `
+                ${thumbHtml}
+                <span class="experience-category">${escapeHtml(experience.category)}</span>
+                <h2>${escapeHtml(experience.title)}</h2>
+                <p class="experience-description">${escapeHtml(experience.description)}</p>
+                <p class="experience-status">${statusHtml}</p>
+                <form method="post" action="${starUrl}" class="star-form">
+                    ${CSRF_INPUT}
+                    <button type="submit" class="button-star${experience.is_starred ? " is-starred" : ""}"
+                            title="${starTitle}">
+                        <span aria-hidden="true">&#9733;</span>
+                        ${experience.is_starred ? "Unstar" : "Star"}
+                        <span class="star-count">${Number(experience.star_count)}</span>
+                    </button>
+                </form>
+                ${actionsHtml}
+            `;
+            return article;
+        }
+
+        async function fetchExperiences(searchQuery = "") {
+            // Batalkan permintaan sebelumnya supaya hasil lama tidak menimpa hasil terbaru.
+            if (experienceAbortController) experienceAbortController.abort();
+            experienceAbortController = new AbortController();
+
+            try {
+                displayPageSection({ showLoading: true });
+
+                const url = searchQuery
+                    ? `${EXPERIENCE_ENDPOINT}?title=${encodeURIComponent(searchQuery)}`
+                    : EXPERIENCE_ENDPOINT;
+                const response = await fetch(url, {
+                    headers: { Accept: "application/json" },
+                    signal: experienceAbortController.signal,
+                });
+                // fetch tidak melempar error untuk status 404/500, jadi diperiksa sendiri.
+                if (!response.ok) throw new Error(`Failed to fetch data (status ${response.status})`);
+
+                const experienceData = await response.json();
+                if (experienceData.length === 0) {
+                    // textContent memperlakukan isinya sebagai teks biasa, jadi aman tanpa escapeHtml.
+                    emptyState.textContent = searchQuery
+                        ? `Tidak ada experience yang cocok dengan "${searchQuery}".`
+                        : "Belum ada pengalaman yang ditambahkan.";
+                    displayPageSection({ showEmpty: true });
+                    return;
+                }
+
+                gridContainer.innerHTML = "";
+                experienceData.forEach((item) => gridContainer.appendChild(buildExperienceCardElement(item)));
+                displayPageSection({ showGrid: true });
+            } catch (error) {
+                if (error.name === "AbortError") return;
+                console.error("Error loading experiences:", error);
+                displayPageSection({ showError: true });
+            }
+        }
+
+        function searchExperiences() {
+            fetchExperiences(searchInput.value.trim());
+        }
+
+        // Debounce: setiap ketikan membatalkan timer sebelumnya, jadi permintaan baru
+        // dikirim setelah pengguna berhenti mengetik selama SEARCH_DEBOUNCE_DELAY ms.
+        searchInput.addEventListener("input", function () {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(searchExperiences, SEARCH_DEBOUNCE_DELAY);
+        });
+
+        // Enter atau tombol Cari: langsung cari tanpa menunggu timer dan tanpa reload.
+        searchForm.addEventListener("submit", function (event) {
+            event.preventDefault();
+            clearTimeout(searchDebounceTimer);
+            searchExperiences();
+        });
+
+        fetchExperiences(searchInput.value.trim());
+    </script>
 {% endblock content %}

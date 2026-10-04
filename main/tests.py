@@ -32,28 +32,28 @@ class MainTest(TestCase):
         self.assertEqual(self.experience.category, "part-time")
         self.assertTrue(self.experience.is_ongoing)
 
-    def test_experience_page(self):
+    def test_experience_page_ships_the_grid_that_javascript_fills(self):
+        """Sejak Tugas 5 kartunya dirakit browser, jadi halaman hanya berisi wadahnya."""
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience.html")
-        self.assertContains(response, self.experience.title)
-        self.assertContains(response, self.experience.description)
-        self.assertContains(response, "Part-Time")
-        self.assertContains(response, "Sedang berlangsung")
-        self.assertContains(response, f'href="{reverse("main:show_main")}"')
+        self.assertContains(response, 'id="grid"')
+        self.assertContains(response, reverse("main:get_experience_json"))
+        self.assertNotContains(response, self.experience.description)
 
     def test_empty_experience_page(self):
         Experience.objects.all().delete()
         response = self.client.get(reverse("main:show_experience"))
         self.assertContains(response, "Belum ada pengalaman yang ditambahkan.")
 
-    def test_completed_experience(self):
+    def test_json_tells_ongoing_from_completed(self):
+        url = reverse("main:get_experience_json")
+        self.assertIsNone(json.loads(self.client.get(url).content)[0]["fields"]["ended_at"])
+
         self.experience.ended_at = timezone.now()
         self.experience.save()
-        response = self.client.get(reverse("main:show_experience"))
         self.assertFalse(self.experience.is_ongoing)
-        self.assertContains(response, "Selesai")
-        self.assertNotContains(response, "Sedang berlangsung")
+        self.assertIsNotNone(json.loads(self.client.get(url).content)[0]["fields"]["ended_at"])
 
 class ProjectPageTest(TestCase):
     def setUp(self):
@@ -208,7 +208,7 @@ class ExperienceCrudTest(TestCase):
         data = json.loads(self.client.get(url, {"title": "design"}).content)
         self.assertEqual([item["fields"]["title"] for item in data], [self.finished.title])
         self.assertEqual(json.loads(self.client.get(url, {"title": "zzz"}).content), [])
-        
+
     def test_experience_page_shows_deserialized_data(self):
         response = self.client.get(reverse("main:show_experience"))
         self.assertContains(response, self.ongoing.title)
@@ -472,11 +472,11 @@ class EditorRoleTest(TestCase):
         self.assertTrue(Project.objects.filter(pk=self.project.id).exists())
 
     def test_editor_sees_edit_but_not_delete_or_add(self):
+        """Kartu dirakit JavaScript, jadi yang dicek adalah hak akses yang dikirim ke skrip."""
         response = self.client.get(reverse("main:show_experience"))
-        self.assertContains(response, ">Edit</a>")
-        self.assertNotContains(response, "card-action-danger")
+        self.assertContains(response, "const CAN_CHANGE_CONTENT = true;")
+        self.assertContains(response, "const IS_SUPERUSER = false;")
         self.assertNotContains(response, "Add experience")
-
 
 class ExperienceStarTest(TestCase):
     """Semua akun yang sudah login boleh memberi star pada experience."""

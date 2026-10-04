@@ -667,6 +667,11 @@ html {
     border-color: var(--accent-dark);
 }
 
+/* Kotak pencarian yang sama, tetapi rata kiri mengikuti judul halaman Experience. */
+.experience-search {
+    margin: 0 0 1.75rem;
+}
+
 .flash-messages {
     margin-top: 1rem;
 }
