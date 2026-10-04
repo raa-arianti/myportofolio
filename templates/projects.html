@@ -43,7 +43,8 @@
     </main>
 
     {% if user.is_superuser %}
-        {% include "components/project_form_modal.html" %}
+        {% url 'main:create_project_ajax' as create_url %}
+        {% include "components/form_modal.html" with modal_id="add-project-modal" form_id="project-form" modal_title="Add a new project" submit_label="Add project" action_url=create_url %}
     {% endif %}
 
     <script>

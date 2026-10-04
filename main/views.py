@@ -76,8 +76,12 @@ def get_experience_json(request):
 
 def show_experience(request):
     """Sama seperti show_projects: halaman ini hanya mengirim kerangkanya, lalu
-    browser mengambil daftar experience lewat AJAX ke get_experience_json."""
-    context = {"title_query": request.GET.get("title", "").strip()}
+    browser mengambil daftar experience lewat AJAX ke get_experience_json.
+    ExperienceForm kosong dikirim untuk mengisi modal tambah experience."""
+    context = {
+        "title_query": request.GET.get("title", "").strip(),
+        "form": ExperienceForm(),
+    }
     return render(request, "experience.html", context)
 
 
@@ -235,6 +239,29 @@ def create_experience(request):
         submit_label="Add experience",
         cancel_url_name="main:show_experience",
     )
+
+
+@require_POST
+def create_experience_ajax(request):
+    """Versi AJAX dari create_experience. Jawabannya selalu JSON: 201 kalau tersimpan,
+    400 beserta pesan per field kalau input tidak valid, 403 kalau tidak berhak.
+
+    Sama seperti create_project_ajax, tidak memakai @login_required supaya yang
+    belum login menerima JSON 403, bukan redirect ke halaman login. Menambah data
+    hanya boleh dilakukan pemilik; Editor hanya boleh mengubah, jadi ikut ditolak."""
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {"message": "Only the portfolio owner can add an experience."}, status=403
+        )
+
+    form = ExperienceForm(request.POST)
+    if form.is_valid():
+        experience = form.save()
+        return JsonResponse(
+            {"message": "Experience added successfully.", "pk": str(experience.id)},
+            status=201,
+        )
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
 @login_required(login_url="/login/")

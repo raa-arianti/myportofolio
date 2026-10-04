@@ -11,7 +11,10 @@
                 <p class="section-kicker">Perjalanan saya sejauh ini</p>
                 <h1>Experience</h1>
                 {% if user.is_superuser %}
-                    <a href="{% url 'main:create_experience' %}" class="button experience-add">Add experience</a>
+                    <button type="button" class="button experience-add" popovertarget="add-experience-modal">
+                        <span aria-hidden="true">+</span>
+                        Add experience
+                    </button>
                 {% endif %}
 
                 {# Tanpa method dan action: pencarian sepenuhnya ditangani JavaScript. #}
@@ -31,6 +34,13 @@
             </div>
         </section>
     </main>
+
+    {# Modal hanya dirender untuk pemilik. View tetap memeriksa hak aksesnya sendiri. #}
+    {% if user.is_superuser %}
+        {% url 'main:create_experience_ajax' as create_url %}
+        {% include "components/form_modal.html" with modal_id="add-experience-modal" form_id="experience-form" modal_title="Add a new experience" submit_label="Add experience" action_url=create_url %}
+    {% endif %}
+
     <script>
         // Alamat endpoint dan hak akses disiapkan Django, lalu dipakai JavaScript.
         const EXPERIENCE_ENDPOINT = "{% url 'main:get_experience_json' %}";
@@ -179,6 +189,50 @@
             clearTimeout(searchDebounceTimer);
             searchExperiences();
         });
+
+        // --- Tambah experience lewat AJAX ---------------------------------------------
+        const CREATE_EXPERIENCE_ENDPOINT = "{% url 'main:create_experience_ajax' %}";
+        // Modal hanya dirender untuk pemilik, jadi bagi pengunjung lain keduanya null.
+        const experienceModal = document.getElementById("add-experience-modal");
+        const experienceForm = document.getElementById("experience-form");
+
+        async function addExperience(event) {
+            event.preventDefault(); // cegah browser mengirim form dan me-reload halaman
+            const submitButton = experienceForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true; // cegah data ganda karena klik berulang
+
+            try {
+                const response = await fetch(CREATE_EXPERIENCE_ENDPOINT, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCookie("csrftoken") },
+                    body: new FormData(experienceForm),
+                });
+                // Kalau server membalas bukan JSON (misalnya error 500), pakai objek kosong.
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    experienceForm.reset();
+                    experienceModal.hidePopover();
+                    showToast("Tersimpan", "Experience berhasil ditambahkan.", "success");
+                    fetchExperiences(searchInput.value.trim()); // perbarui daftar tanpa reload
+                } else {
+                    // 400 membawa errors per field, 403 membawa satu message.
+                    const messages = result.errors
+                        ? Object.values(result.errors).flat().map((error) => error.message)
+                        : [result.message || `Terjadi kesalahan (status ${response.status}).`];
+                    showToast("Gagal menambahkan experience", messages.join(" "), "error");
+                }
+            } catch (error) {
+                console.error("Error adding experience:", error);
+                showToast("Gagal menambahkan experience", "Server tidak merespons. Silakan coba lagi.", "error");
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        if (experienceForm) {
+            experienceForm.addEventListener("submit", addExperience);
+        }
 
         fetchExperiences(searchInput.value.trim());
     </script>

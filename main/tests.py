@@ -582,3 +582,52 @@ class AjaxCreateProjectTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("title", response.json()["errors"])
         self.assertFalse(Project.objects.exists())
+
+
+class AjaxCreateExperienceTest(TestCase):
+    """Tugas 5: endpoint tambah experience versi AJAX selalu menjawab dengan JSON."""
+
+    def setUp(self):
+        self.url = reverse("main:create_experience_ajax")
+        self.valid_data = {
+            "title": "MLOps Mentee",
+            "description": "Learned to deploy models.",
+            "category": "internship",
+        }
+        self.owner = User.objects.create_superuser("ira", password="owner-pass")
+        self.member = User.objects.create_user("pengunjung", password="kataSandi!2026")
+        self.editor = User.objects.create_user("editor", password="kataSandi!2026")
+        self.editor.groups.add(Group.objects.create(name="Editor"))
+
+    def test_owner_can_create_through_ajax(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(Experience.objects.filter(title="MLOps Mentee").exists())
+
+    def test_invalid_data_returns_field_errors(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self.url, {**self.valid_data, "title": ""})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.json()["errors"])
+        self.assertFalse(Experience.objects.exists())
+
+    def test_visitor_member_and_editor_get_json_403(self):
+        for user in [None, self.member, self.editor]:
+            with self.subTest(user=user):
+                if user:
+                    self.client.force_login(user)
+                response = self.client.post(self.url, self.valid_data)
+                self.assertEqual(response.status_code, 403)
+                self.assertIn("message", response.json())
+        self.assertFalse(Experience.objects.exists())
+
+    def test_get_request_is_not_allowed(self):
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_owner_page_ships_the_modal_form(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("main:show_experience"))
+        self.assertContains(response, 'id="add-experience-modal"')
+        self.assertContains(response, 'id="experience-form"')

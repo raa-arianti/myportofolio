@@ -1,27 +1,30 @@
-{# Modal tambah proyek. Memakai atribut popover bawaan HTML, sama seperti dialog hapus, #}
-{# jadi tombol buka dan tutupnya tidak butuh JavaScript. Pengirimannya lewat AJAX. #}
-<div id="add-project-modal"
+{# Modal berisi form tambah data, dipakai halaman Projects dan Experience. #}
+{# Parameter lewat include: modal_id, form_id, modal_title, submit_label, action_url. #}
+{# Form-nya diambil dari variabel form milik halaman. #}
+{# Memakai atribut popover bawaan HTML, sama seperti dialog hapus, jadi tombol buka #}
+{# dan tutupnya tidak butuh JavaScript. Pengirimannya lewat AJAX. #}
+<div id="{{ modal_id }}"
      class="modal-layer"
      popover="auto"
      role="dialog"
      aria-modal="true"
-     aria-labelledby="add-project-modal-title">
+     aria-labelledby="{{ modal_id }}-title">
     <button type="button"
             class="modal-backdrop"
-            popovertarget="add-project-modal"
+            popovertarget="{{ modal_id }}"
             popovertargetaction="hide"
-            aria-label="Close the add project form"></button>
+            aria-label="Close the form"></button>
 
     <div class="modal-content modal-content-wide">
         <button type="button"
                 class="modal-close"
-                popovertarget="add-project-modal"
+                popovertarget="{{ modal_id }}"
                 popovertargetaction="hide"
-                aria-label="Close the add project form">&times;</button>
+                aria-label="Close the form">&times;</button>
 
-        <h2 id="add-project-modal-title">Add a new project</h2>
+        <h2 id="{{ modal_id }}-title">{{ modal_title }}</h2>
 
-        <form id="project-form" method="post" action="{% url 'main:create_project_ajax' %}" class="entry-form">
+        <form id="{{ form_id }}" method="post" action="{{ action_url }}" class="entry-form">
             {% csrf_token %}
             {% for field in form %}
                 <div class="form-group">
@@ -30,18 +33,15 @@
                     {% if field.help_text %}
                         <p class="form-help">{{ field.help_text }}</p>
                     {% endif %}
-                    {% for error in field.errors %}
-                        <p class="form-error">{{ error }}</p>
-                    {% endfor %}
                 </div>
             {% endfor %}
 
             <div class="modal-actions">
                 <button type="button"
                         class="button button-secondary"
-                        popovertarget="add-project-modal"
+                        popovertarget="{{ modal_id }}"
                         popovertargetaction="hide">Cancel</button>
-                <button type="submit" class="button">Add project</button>
+                <button type="submit" class="button">{{ submit_label }}</button>
             </div>
         </form>
     </div>
