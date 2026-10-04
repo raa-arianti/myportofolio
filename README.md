@@ -40,15 +40,20 @@ diambil browser lewat **AJAX** ke `/api/projects/`, pencarian berjalan sambil me
 **debounce**, dan proyek baru dikirim dari **modal** lewat `fetch` lalu dikabarkan dengan
 notifikasi **toast**.
 
+Sejak Tugas 5, halaman **Experience** bekerja dengan cara yang sama: kartunya dirakit browser
+dari `/api/experience/`, ada pencarian judul dengan debounce, dan experience baru ditambahkan
+dari modal tanpa meninggalkan halaman. Modal dan fungsi JavaScript-nya dipakai bersama oleh
+kedua halaman.
+
 | Fitur | URL |
 |---|---|
 | Tambah proyek | `/projects/add/` (halaman) dan `/projects/add-ajax/` (dikirim lewat fetch) |
 | Ubah dan hapus proyek | `/projects/<id>/edit/`, `/projects/<id>/delete/` |
-| Tambah experience | `/experience/add/` |
+| Tambah experience | `/experience/add/` (halaman) dan `/experience/add-ajax/` (dikirim lewat fetch) |
 | Ubah dan hapus experience | `/experience/<id>/edit/`, `/experience/<id>/delete/` |
 | Beri atau batalkan star proyek | `/projects/<id>/star/` |
 | Beri atau batalkan star experience | `/experience/<id>/star/` |
-| Data JSON | `/api/projects/` (mendukung `?title=`), `/api/experience/` |
+| Data JSON | `/api/projects/` dan `/api/experience/`, keduanya mendukung `?title=` |
 | Daftar akun, login, logout | `/register/`, `/login/`, `/logout/` |
 
 ### Peran pengguna
@@ -99,19 +104,18 @@ myportofolio/
 ├── templates/
 │   ├── base.html            # kerangka bersama: head, navbar, footer, pesan
 │   ├── index.html           # halaman utama
-│   ├── experience.html      # daftar pengalaman
-│   ├── projects.html        # daftar proyek dengan pencarian
+│   ├── experience.html      # daftar pengalaman: kerangka + skrip AJAX
+│   ├── projects.html        # daftar proyek: kerangka + skrip AJAX
 │   ├── entry_form.html      # satu halaman form untuk tambah dan ubah data
 │   ├── register.html        # daftar akun
 │   ├── login.html           # login
 │   ├── 403.html             # halaman untuk pengunjung yang bukan pemilik
 │   └── components/
-│       ├── owner_actions.html  # tombol Edit, Delete, dan dialog konfirmasi
-│       ├── star_button.html    # tombol star, dipakai proyek dan experience
-│       ├── project_form_modal.html  # modal tambah proyek
+│       ├── form_modal.html    # modal form tambah data, dipakai proyek dan experience
 │       └── toast.html         # notifikasi singkat, disertakan base.html
 └── static/
     ├── css/style.css        # seluruh gaya halaman
+    ├── js/dom.js            # escapeHtml dan getCookie, dimuat di <head> base.html
     ├── js/toast.js          # fungsi showToast untuk notifikasi
     └── img/                 # foto, ilustrasi cat air, ikon, dan gambar proyek
 </pre>
@@ -232,6 +236,30 @@ supaya hasilnya tidak saling menimpa. Proyek baru ditambahkan dari modal lewat `
 daftarnya langsung diperbarui tanpa reload. Karena kartu kini dirakit di browser, auto-escaping
 Django tidak lagi berlaku, sehingga setiap nilai dibungkus `escapeHtml` dan `ProjectForm`
 membuang tag HTML lewat `strip_tags` sebagai lapisan kedua.
+
+### Tugas 5, Interaktivitas untuk Experience
+Menerapkan seluruh pola Tutorial 05 pada bagian Experience. `get_experience_json` kini merakit
+JSON dengan `JsonResponse` beserta `star_count`, `is_starred`, dan `starred_by_names`, serta
+menerima `?title=` untuk pencarian. Halaman `/experience/` hanya mengirim kerangka, lalu
+skripnya mengambil data dengan `fetch` dan menampilkan salah satu dari empat kondisi: loading,
+error, kosong, atau grid kartu. Pencarian memakai debounce 300 milidetik dan `AbortController`.
+Experience baru dikirim dari modal ke `/experience/add-ajax/`, yang memeriksa hak akses di
+dalam view dan menjawab dengan JSON berstatus 201, 400, atau 403; hasilnya dikabarkan lewat
+toast dan daftar diperbarui tanpa reload.
+
+Yang dirapikan sekaligus supaya tidak ada kode kembar di dua halaman:
+
+- `escapeHtml` dan `getCookie` dipindahkan dari `projects.html` ke `static/js/dom.js`.
+- Modal tambah proyek menjadi komponen `components/form_modal.html` yang menerima id, judul,
+  dan alamat tujuan lewat `{% include ... with %}`.
+- `ProjectForm` dan `ExperienceForm` memakai satu fungsi `strip_html` di dalam `clean_title`
+  dan `clean_description`.
+- Komponen `owner_actions.html` dan `star_button.html` dihapus karena kedua halaman daftar
+  sekarang merakit tombolnya di JavaScript.
+
+Total unit test menjadi 63. Cara mencoba perlindungan XSS: login sebagai pemilik, buka
+`/experience/`, lalu tambahkan experience berjudul `<img src="x" onerror="alert('XSS!')">`.
+Server menolaknya dengan status 400 dan pesannya muncul di toast, tanpa ada `alert`.
 
 ---
 
@@ -517,6 +545,104 @@ string, misalnya tanggal menjadi `"2026-02-28T00:00:00Z"`, sehingga bisa dibaca 
 pun. Deserialization melakukan kebalikannya, mengubah string itu kembali menjadi `UUID` dan
 `datetime`. Karena itulah template saya tetap bisa memanggil `experience.is_ongoing` dan
 `experience.get_category_display` pada data yang datang dari JSON.
+
+### Tugas 5
+
+1. **Debouncing** adalah teknik menunda sebuah aksi sampai tidak ada kejadian baru selama
+   jeda tertentu. Selama kejadian masih berdatangan, aksinya terus diundur, dan hanya kejadian
+   terakhir yang benar-benar dijalankan.
+
+   Di `templates/experience.html`, setiap huruf yang diketik memicu event `input`. Handler-nya
+   tidak langsung memanggil server, melainkan membatalkan timer sebelumnya lalu memasang timer
+   baru:
+
+   ```js
+   searchInput.addEventListener("input", function () {
+       clearTimeout(searchDebounceTimer);
+       searchDebounceTimer = setTimeout(searchExperiences, SEARCH_DEBOUNCE_DELAY); // 300 ms
+   });
+   ```
+
+   Teknik ini penting pada pencarian AJAX karena tiga alasan:
+
+   - **Menghemat permintaan.** Tanpa debounce, mengetik "intern" mengirim enam permintaan
+     (`i`, `in`, `int`, dan seterusnya), dan setiap permintaan menjalankan query
+     `title__icontains` di basis data. Lima di antaranya langsung tidak berguna. Dengan
+     debounce, saat diuji di tab Network hanya ada satu permintaan, yaitu
+     `/api/experience/?title=intern`.
+   - **Mencegah hasil yang saling menimpa.** Jawaban server tidak dijamin tiba sesuai urutan
+     pengiriman. Kalau jawaban untuk "in" datang setelah jawaban untuk "intern", daftar akan
+     menampilkan hasil yang salah. Debounce mengurangi peluangnya, dan sisanya saya tutup
+     dengan `AbortController` yang membatalkan permintaan lama.
+   - **Tampilan lebih tenang.** Tanpa debounce, daftar berganti ke kondisi loading lalu ke
+     hasil pada setiap huruf sehingga tampak berkedip.
+
+   Menekan Enter atau tombol Cari sengaja melewati jeda itu (`clearTimeout` lalu langsung
+   mencari), karena di titik itu pengguna jelas sudah selesai mengetik.
+
+2. `fetch()` tidak mengembalikan jawaban server, melainkan sebuah **Promise**, yaitu janji
+   bahwa jawabannya akan ada nanti. **`await`** menjeda fungsi `async` di baris itu sampai
+   Promise selesai, lalu memberikan nilai hasilnya, tanpa membekukan halaman: browser tetap
+   bisa menggambar tulisan "Memuat experience..." dan merespons klik selama menunggu.
+
+   Di `fetchExperiences` ada dua `await` karena ada dua hal yang ditunggu:
+
+   ```js
+   const response = await fetch(url, {...});       // menunggu status dan header tiba
+   const experienceData = await response.json();   // menunggu isi dibaca dan diurai
+   ```
+
+   **Kalau `await` dihilangkan:**
+
+   - `response` berisi objek Promise, bukan `Response`. `response.ok` bernilai `undefined`,
+     sehingga `if (!response.ok)` selalu benar dan halaman saya selalu berakhir di kondisi
+     error walaupun server menjawab dengan baik. Kalau pemeriksaan itu tidak ada pun,
+     `response.json()` akan gagal dengan `TypeError: response.json is not a function`.
+   - Kode di bawahnya berjalan sebelum datanya ada. Di `addExperience`, toast "Tersimpan"
+     akan muncul dan daftar dimuat ulang sebelum server selesai menyimpan, bahkan ketika
+     server sebenarnya menolak dengan 400 atau 403.
+   - `try...catch` tidak menangkap kegagalan Promise yang tidak di-`await`. Kalau jaringan
+     putus, error-nya menjadi *unhandled promise rejection* di konsol, dan blok `catch` yang
+     menampilkan pesan gagal tidak pernah berjalan.
+
+   Alternatifnya adalah `.then()`, tetapi untuk urutan langkah seperti ini `await` membuat
+   kode terbaca dari atas ke bawah seperti kode biasa.
+
+3. **XSS (Cross-Site Scripting)** adalah serangan ketika penyerang berhasil menyisipkan
+   JavaScript miliknya ke halaman yang kemudian dibuka orang lain. Skrip itu berjalan di
+   browser korban seolah-olah bagian dari situs saya, jadi ia bisa melakukan apa pun yang
+   bisa dilakukan korban: membaca isi halaman, mengirim permintaan atas nama korban, atau
+   mengubah tampilan. Di portofolio ini korban yang paling berbahaya adalah pemilik yang
+   sedang login, karena skripnya bisa mengirim permintaan hapus untuk semua data.
+
+   **Mengapa data lewat AJAX lebih rentan.** Template Django melakukan *auto-escaping*: setiap
+   `{{ experience.title }}` otomatis mengubah `<` menjadi `&lt;`, `>` menjadi `&gt;`, dan
+   seterusnya, sehingga tag kiriman pengguna tampil sebagai teks. Perlindungan ini aktif tanpa
+   saya menulis apa pun. Begitu kartu dirakit di browser, perlindungan itu hilang karena dua
+   hal:
+
+   - `JsonResponse` mengirim data apa adanya. JSON hanyalah format data dan tidak tahu bahwa
+     isinya akan dijadikan HTML, jadi `<img ...>` tetap dikirim sebagai `<img ...>`.
+   - JavaScript menyisipkannya dengan `innerHTML`, yang meminta browser mengurai string itu
+     sebagai HTML. Tag di dalam judul menjadi elemen sungguhan dan `onerror`-nya dijalankan.
+
+   Jadi tanggung jawab escaping pindah dari framework ke saya, dan cukup satu nilai yang
+   terlupa untuk membuka celah. Di proyek ini saya menutupnya berlapis:
+
+   - **Di browser:** setiap nilai teks dibungkus `escapeHtml` (`static/js/dom.js`) sebelum
+     masuk ke `innerHTML`, termasuk yang masuk ke atribut `alt`, `src`, dan `title`. Pesan
+     toast dan pesan "tidak ada yang cocok" memakai `textContent`, yang tidak pernah mengurai
+     HTML.
+   - **Di server:** `clean_title` dan `clean_description` pada `ExperienceForm` membuang tag
+     dengan `strip_tags` sebelum data disimpan, dan menolak nilai yang isinya hanya tag.
+
+   Pengujiannya dilakukan dengan dua cara. Lewat modal, judul
+   `<img src="x" onerror="alert('XSS!')">` ditolak server dengan status 400 dan pesannya
+   tampil di toast. Lalu, untuk meniru data berbahaya yang sudah terlanjur ada di basis data
+   (misalnya masuk lewat Django Admin yang tidak melewati form saya), data yang sama dimuat
+   langsung ke basis data uji: kartunya menampilkan tulisan `<img src="x" ...>` sebagai teks
+   biasa, tidak ada elemen `<img>` yang terbentuk, dan `alert` tidak muncul. Cara kedua ini
+   membuktikan bahwa `escapeHtml` tetap melindungi halaman walaupun lapisan server terlewati.
 
 ---
 
@@ -881,3 +1007,65 @@ sekadar dipercaya karena test-nya hijau.
 Catatan teknis yang juga perlu diingat: AI tidak bisa login ke akun saya, jadi tampilan modal
 tambah proyek dan toast setelah berhasil menyimpan belum pernah dilihat langsung di browser.
 Bagian itu baru terbukti lewat unit test dan pengecekan fungsi di konsol browser.
+
+### Tugas 5
+
+#### Tools
+
+**Claude (model Opus 5.5) melalui Claude Code** di aplikasi desktop, 4 Oktober 2026.
+
+#### Strategi prompting
+
+Saya memulai dengan cara kerja dipandu seperti Tugas 4: saya memberikan PDF tugas, AI membaca
+kode saya lebih dulu, lalu pekerjaan dibagi menjadi enam tahap dengan satu commit per tahap.
+Tiap tahap berisi analisis (apa yang berubah dan mengapa), potongan kode beserta patokan
+"tempel di antara X dan Y", cara mengeceknya, dan pesan commit. Setelah tiap commit saya minta
+AI memeriksa hasilnya sebelum lanjut.
+
+Tahap 1 sampai 3 saya tempel dan commit sendiri. Setelah itu, karena waktunya mepet dengan
+tenggat, saya meminta AI mengerjakan sisanya secara langsung, dengan syarat yang sama seperti
+Tutorial 05: tetap bertahap, diuji dulu, dan satu commit per tahap. Commit yang dibuat AI
+dapat dikenali dari baris `Co-Authored-By` di pesannya.
+
+#### Bagian yang dibantu AI
+
+- Menyusun rencana enam tahap dan potongan kode Tahap 1 sampai 3: `static/js/dom.js`,
+  `get_experience_json` yang dirakit manual, serta kerangka dan skrip AJAX halaman Experience.
+- Memeriksa tiap commit saya dengan membaca diff dan menjalankan unit test.
+- Mengerjakan langsung, atas permintaan saya: perbaikan sisa Tahap 3, modal dan
+  `create_experience_ajax` (Tahap 4), `strip_tags` pada `ExperienceForm` (Tahap 5), serta
+  unit test baru, penghapusan komponen yang sudah tidak terpakai, dan README ini (Tahap 6).
+- Menguji hasil akhirnya di browser pada server uji dengan basis data sementara
+  (`manage.py testserver`), termasuk login dengan akun uji, sehingga data asli saya tidak
+  tersentuh.
+- Menyusun draf jawaban pertanyaan reflektif Tugas 5 berdasarkan kode proyek ini.
+
+#### Bagian yang saya kerjakan sendiri
+
+- Menempel, menjalankan, dan meng-commit Tahap 1 sampai 3.
+- Memutuskan kapan beralih dari cara dipandu ke dikerjakan AI, dan batasannya.
+- Membaca ulang hasil Tahap 4 sampai 6 dan draf jawaban reflektif, lalu push dan pengumpulan.
+
+#### Keterbatasan AI yang saya temukan
+
+- **Petunjuk berbasis nomor baris cepat basi.** AI menyebut "hapus baris 206 sampai 209",
+  padahal setelah saya mengedit test di atasnya, nomornya sudah bergeser dan saya harus
+  bertanya ulang. Patokan berupa nama fungsi ternyata lebih bisa diandalkan daripada nomor
+  baris.
+- **Satu tahap yang terlalu padat mudah terlewat sebagian.** Tahap 3 berisi perubahan di empat
+  berkas sekaligus. Saya melewatkan dua di antaranya (satu test lama belum terhapus dan
+  `show_experience` belum diganti), dan commit saya membuat satu test gagal. Kesalahan itu
+  baru ketahuan karena AI menjalankan test saat memeriksa, bukan karena petunjuknya jelas.
+  Rencana AI di Tahap 2 juga memaksa adanya kode sementara di `show_experience` yang hanya
+  berumur satu commit.
+- **AI mengubah perilaku tanpa saya minta.** Saat kartu experience dipindahkan ke JavaScript,
+  dialog konfirmasi hapus yang sebelumnya berupa popover diganti `confirm()` bawaan browser
+  agar sama dengan halaman Projects. AI menyebutkannya di penjelasan, tetapi ini tetap
+  penurunan tampilan yang perlu saya putuskan sendiri apakah mau dikembalikan.
+- **Peringatan editor bukan error.** Angka "9+" merah di VS Code pada `projects.html` sempat
+  saya kira kesalahan dari perubahan Tahap 1. Ternyata itu pemeriksa JavaScript VS Code yang
+  tidak mengenali tag Django di dalam `<script>`. Pelajarannya, yang menentukan benar atau
+  tidaknya adalah unit test dan browser, bukan warna di editor.
+
+Berbeda dari Tutorial 05, kali ini AI bisa menguji modal dan toast langsung di browser karena
+memakai akun uji di basis data sementara. Yang tetap belum diuji AI adalah tampilan di PWS.
