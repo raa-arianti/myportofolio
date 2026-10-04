@@ -75,12 +75,11 @@ def get_experience_json(request):
 
 
 def show_experience(request):
-    # Sementara masih merender daftar di server. Tahap berikutnya halaman ini
-    # hanya mengirim kerangka dan datanya diambil lewat AJAX.
-    experience_list = Experience.objects.order_by(
-        F("ended_at").desc(nulls_first=True), "started_at"
-    )
-    return render(request, "experience.html", {"experience_list": experience_list})
+    """Sama seperti show_projects: halaman ini hanya mengirim kerangkanya, lalu
+    browser mengambil daftar experience lewat AJAX ke get_experience_json."""
+    context = {"title_query": request.GET.get("title", "").strip()}
+    return render(request, "experience.html", context)
+
 
 def get_projects_json(request):
     """Kirim data proyek sebagai JSON. ?title=... menyaring berdasarkan judul.

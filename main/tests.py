@@ -209,11 +209,6 @@ class ExperienceCrudTest(TestCase):
         self.assertEqual([item["fields"]["title"] for item in data], [self.finished.title])
         self.assertEqual(json.loads(self.client.get(url, {"title": "zzz"}).content), [])
 
-    def test_experience_page_shows_deserialized_data(self):
-        response = self.client.get(reverse("main:show_experience"))
-        self.assertContains(response, self.ongoing.title)
-        self.assertContains(response, "Selesai &middot; Nov 2025")
-
     def test_create_experience(self):
         response = self.client.post(
             reverse("main:create_experience"),
