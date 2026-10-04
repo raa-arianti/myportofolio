@@ -1008,64 +1008,56 @@ Catatan teknis yang juga perlu diingat: AI tidak bisa login ke akun saya, jadi t
 tambah proyek dan toast setelah berhasil menyimpan belum pernah dilihat langsung di browser.
 Bagian itu baru terbukti lewat unit test dan pengecekan fungsi di konsol browser.
 
-### Tugas 5
+### **Tugas 5**
 
-#### Tools
+#### **Tools**
 
 **Claude (model Opus 5.5) melalui Claude Code** di aplikasi desktop, 4 Oktober 2026.
 
-#### Strategi prompting
+#### **Strategi prompting**
 
-Saya memulai dengan cara kerja dipandu seperti Tugas 4: saya memberikan PDF tugas, AI membaca
-kode saya lebih dulu, lalu pekerjaan dibagi menjadi enam tahap dengan satu commit per tahap.
-Tiap tahap berisi analisis (apa yang berubah dan mengapa), potongan kode beserta patokan
-"tempel di antara X dan Y", cara mengeceknya, dan pesan commit. Setelah tiap commit saya minta
-AI memeriksa hasilnya sebelum lanjut.
+Untuk Tugas 5, saya menggunakan AI sebagai **pemandu dan reviewer**, bukan sebagai pihak yang mengerjakan implementasi secara langsung. Saya memberikan PDF tugas dan meminta AI membaca serta memahami kode proyek saya terlebih dahulu.
 
-Tahap 1 sampai 3 saya tempel dan commit sendiri. Setelah itu, karena waktunya mepet dengan
-tenggat, saya meminta AI mengerjakan sisanya secara langsung, dengan syarat yang sama seperti
-Tutorial 05: tetap bertahap, diuji dulu, dan satu commit per tahap. Commit yang dibuat AI
-dapat dikenali dari baris `Co-Authored-By` di pesannya.
+Pekerjaan kemudian saya bagi menjadi enam tahap. Pada setiap tahap, AI terlebih dahulu menjelaskan apa yang perlu diubah, alasan perubahan tersebut, file yang terlibat, serta memberikan potongan kode dan petunjuk mengenai bagian kode tempat perubahan tersebut harus diterapkan. Setelah memahami instruksinya, **saya sendiri yang menempelkan, menjalankan, menguji, dan melakukan commit terhadap perubahan tersebut**.
 
-#### Bagian yang dibantu AI
+Setelah setiap tahap selesai, saya meminta AI memeriksa hasil pekerjaan saya dengan membaca diff, melihat struktur kode, dan menjalankan atau menganalisis hasil unit test. Jika ditemukan kesalahan, AI menjelaskan penyebabnya dan memberikan arahan perbaikan, tetapi **perubahan tetap saya lakukan sendiri**.
 
-- Menyusun rencana enam tahap dan potongan kode Tahap 1 sampai 3: `static/js/dom.js`,
-  `get_experience_json` yang dirakit manual, serta kerangka dan skrip AJAX halaman Experience.
-- Memeriksa tiap commit saya dengan membaca diff dan menjalankan unit test.
-- Mengerjakan langsung, atas permintaan saya: perbaikan sisa Tahap 3, modal dan
-  `create_experience_ajax` (Tahap 4), `strip_tags` pada `ExperienceForm` (Tahap 5), serta
-  unit test baru, penghapusan komponen yang sudah tidak terpakai, dan README ini (Tahap 6).
-- Menguji hasil akhirnya di browser pada server uji dengan basis data sementara
-  (`manage.py testserver`), termasuk login dengan akun uji, sehingga data asli saya tidak
-  tersentuh.
-- Menyusun draf jawaban pertanyaan reflektif Tugas 5 berdasarkan kode proyek ini.
+Dengan pola ini, AI berfungsi sebagai tutor yang membantu saya memahami langkah implementasi, sementara keputusan akhir dan pengerjaan kode tetap berada pada saya.
 
-#### Bagian yang saya kerjakan sendiri
+#### **Bagian yang dibantu AI**
 
-- Menempel, menjalankan, dan meng-commit Tahap 1 sampai 3.
-- Memutuskan kapan beralih dari cara dipandu ke dikerjakan AI, dan batasannya.
-- Membaca ulang hasil Tahap 4 sampai 6 dan draf jawaban reflektif, lalu push dan pengumpulan.
+* Membaca dan memahami struktur proyek sebelum memberikan arahan perubahan.
+* Menyusun rencana pengerjaan Tugas 5 menjadi beberapa tahap agar perubahan dapat dilakukan secara bertahap.
+* Menjelaskan konsep yang digunakan, terutama **AJAX, `fetch`, JSON response, debounce, `AbortController`, modal, toast, dan perlindungan XSS**.
+* Memberikan contoh atau potongan kode yang saya gunakan sebagai panduan untuk mengimplementasikan fitur pada halaman Experience.
+* Menjelaskan perubahan yang diperlukan pada `static/js/dom.js`, `get_experience_json`, halaman `experience.html`, modal, dan endpoint AJAX.
+* Memeriksa diff dan hasil unit test setelah saya menyelesaikan setiap tahap.
+* Membantu menemukan penyebab ketika terdapat test yang gagal atau bagian implementasi yang belum lengkap.
+* Memberikan masukan mengenai struktur kode dan bagian yang dapat dirapikan agar tidak terjadi duplikasi antara halaman Projects dan Experience.
+* Membantu saya memahami kesalahan yang muncul selama implementasi, bukan mengambil alih pengerjaan kode.
+* Membantu menyusun dan meninjau dokumentasi serta jawaban reflektif berdasarkan implementasi yang sudah saya kerjakan.
 
-#### Keterbatasan AI yang saya temukan
+#### **Bagian yang saya kerjakan sendiri**
 
-- **Petunjuk berbasis nomor baris cepat basi.** AI menyebut "hapus baris 206 sampai 209",
-  padahal setelah saya mengedit test di atasnya, nomornya sudah bergeser dan saya harus
-  bertanya ulang. Patokan berupa nama fungsi ternyata lebih bisa diandalkan daripada nomor
-  baris.
-- **Satu tahap yang terlalu padat mudah terlewat sebagian.** Tahap 3 berisi perubahan di empat
-  berkas sekaligus. Saya melewatkan dua di antaranya (satu test lama belum terhapus dan
-  `show_experience` belum diganti), dan commit saya membuat satu test gagal. Kesalahan itu
-  baru ketahuan karena AI menjalankan test saat memeriksa, bukan karena petunjuknya jelas.
-  Rencana AI di Tahap 2 juga memaksa adanya kode sementara di `show_experience` yang hanya
-  berumur satu commit.
-- **AI mengubah perilaku tanpa saya minta.** Saat kartu experience dipindahkan ke JavaScript,
-  dialog konfirmasi hapus yang sebelumnya berupa popover diganti `confirm()` bawaan browser
-  agar sama dengan halaman Projects. AI menyebutkannya di penjelasan, tetapi ini tetap
-  penurunan tampilan yang perlu saya putuskan sendiri apakah mau dikembalikan.
-- **Peringatan editor bukan error.** Angka "9+" merah di VS Code pada `projects.html` sempat
-  saya kira kesalahan dari perubahan Tahap 1. Ternyata itu pemeriksa JavaScript VS Code yang
-  tidak mengenali tag Django di dalam `<script>`. Pelajarannya, yang menentukan benar atau
-  tidaknya adalah unit test dan browser, bukan warna di editor.
+* Menentukan pembagian tahap dan urutan pengerjaan Tugas 5.
+* Membaca dan memahami instruksi tugas sebelum mulai mengimplementasikan fitur.
+* Menempel dan mengetik seluruh perubahan kode yang diberikan sebagai panduan oleh AI.
+* Mengubah sendiri file-file proyek sesuai arahan yang diberikan.
+* Menjalankan server, unit test, dan pengecekan di browser setelah setiap perubahan.
+* Menganalisis hasil pengujian dan menentukan apakah implementasi sudah sesuai dengan spesifikasi tugas.
+* Memperbaiki kode ketika ditemukan error atau perilaku yang belum sesuai.
+* Melakukan commit untuk setiap tahap pengerjaan.
+* Menentukan keputusan akhir mengenai implementasi, termasuk perubahan yang perlu dipertahankan atau diperbaiki.
+* Membaca kembali seluruh kode dan dokumentasi sebelum melakukan push dan pengumpulan.
 
-Berbeda dari Tutorial 05, kali ini AI bisa menguji modal dan toast langsung di browser karena
-memakai akun uji di basis data sementara. Yang tetap belum diuji AI adalah tampilan di PWS.
+#### **Keterbatasan AI yang saya temukan**
+
+* **Petunjuk berbasis nomor baris cepat basi.** AI beberapa kali memberikan patokan berdasarkan nomor baris, tetapi nomor tersebut dapat berubah setelah saya melakukan perubahan pada bagian lain. Patokan berupa nama fungsi atau potongan kode tertentu ternyata lebih dapat diandalkan.
+
+* **Tahap yang terlalu padat mudah menyebabkan bagian terlewat.** Ketika beberapa file harus diubah dalam satu tahap, saya sempat melewatkan sebagian perubahan. Hal tersebut baru terlihat setelah unit test dijalankan. Dari sini saya belajar bahwa perubahan sebaiknya dilakukan sedikit demi sedikit dan setiap tahap harus diuji sebelum dilanjutkan.
+
+* **AI dapat memberikan solusi yang mengubah perilaku aplikasi.** Saat kartu Experience dipindahkan untuk dirakit menggunakan JavaScript, AI sempat mengarahkan penggunaan `confirm()` bawaan browser untuk konfirmasi penghapusan. Saya tetap perlu menilai apakah perubahan tersebut sesuai dengan rancangan dan kebutuhan tugas, karena solusi yang secara teknis bekerja belum tentu merupakan solusi yang paling sesuai dengan proyek saya.
+
+* **Peringatan editor tidak selalu berarti kode salah.** Angka peringatan pada VS Code sempat terlihat seperti error pada JavaScript di dalam template Django. Setelah diperiksa, masalahnya berasal dari editor yang tidak sepenuhnya memahami sintaks template Django. Karena itu, saya belajar membedakan antara peringatan editor dengan hasil sebenarnya dari unit test dan browser.
+
+Penggunaan AI pada Tugas 5 membantu saya bekerja lebih terarah, terutama ketika harus memahami beberapa konsep JavaScript sekaligus. Namun, AI tetap saya gunakan sebagai **pemandu dan pemeriksa**, sedangkan implementasi, pengujian, debugging, dan keputusan akhir saya kerjakan sendiri. Dengan cara ini saya tetap memahami perubahan yang masuk ke proyek dan dapat menjelaskan alasan di balik implementasinya.
