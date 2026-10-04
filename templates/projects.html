@@ -76,16 +76,6 @@
             gridContainer.classList.toggle("hide", !showGrid);
         }
 
-        // Django tidak lagi meng-escape data ini, karena kartunya dirakit di browser.
-        // Tanpa fungsi ini, judul berisi tag HTML akan dijalankan sebagai kode (XSS).
-        function escapeHtml(value) {
-            return String(value ?? "")
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#39;");
-        }
 
         function buildProjectCardElement(item) {
             const project = item.fields;
@@ -196,20 +186,6 @@
             document.getElementById("add-project-modal").hidePopover();
         }
 
-        // Token CSRF dibaca dari cookie lalu dikirim lewat header X-CSRFToken.
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== "") {
-                for (const rawCookie of document.cookie.split(";")) {
-                    const cookie = rawCookie.trim();
-                    if (cookie.startsWith(name + "=")) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
 
         async function addProject(event) {
             event.preventDefault();
