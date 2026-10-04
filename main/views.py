@@ -5,9 +5,8 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.exceptions import PermissionDenied
-from django.core import serializers
 from django.db.models import F
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -38,32 +37,50 @@ def show_main(request):
 
 
 def get_experience_json(request):
-    """Kirim data experience sebagai JSON. Yang masih berlangsung (ended_at kosong) di atas,
-    lalu yang paling baru selesai, sama seperti urutan linimasa di rancangan. Kalau tanggal
-    selesainya sama, yang lebih dulu dimasukkan tampil lebih dulu."""
-    experiences = Experience.objects.order_by(
+    """Kirim data experience sebagai JSON. ?title=... menyaring berdasarkan judul.
+
+    Urutan: yang masih berlangsung (ended_at kosong) di atas, lalu yang paling baru
+    selesai. Kalau tanggal selesainya sama, yang lebih dulu dimasukkan tampil lebih dulu.
+
+    JSON dirakit manual dengan alasan yang sama seperti get_projects_json: status star
+    bergantung pada akun yang sedang login. Hanya username yang dikirim, bukan id."""
+    title_query = request.GET.get("title", "").strip()
+    experiences = Experience.objects.prefetch_related("starred_by").order_by(
         F("ended_at").desc(nulls_first=True), "started_at"
     )
-    # use_natural_foreign_keys membuat daftar star tampil sebagai username,
-    # bukan id pengguna di basis data.
-    experiences_json = serializers.serialize(
-        "json", experiences, use_natural_foreign_keys=True
-    )
-    return HttpResponse(experiences_json, content_type="application/json")
+    if title_query:
+        experiences = experiences.filter(title__icontains=title_query)
+
+    data = []
+    for experience in experiences:
+        starred_users = list(experience.starred_by.all())
+        data.append(
+            {
+                "pk": str(experience.id),
+                "fields": {
+                    "title": experience.title,
+                    "description": experience.description,
+                    # Label yang dibaca manusia ("Part-Time"), bukan kodenya ("part-time").
+                    "category": experience.get_category_display(),
+                    "thumbnail": experience.thumbnail,
+                    # None berarti masih berlangsung.
+                    "ended_at": experience.ended_at,
+                    "star_count": len(starred_users),
+                    "is_starred": request.user in starred_users,
+                    "starred_by_names": ", ".join(user.username for user in starred_users),
+                },
+            }
+        )
+    return JsonResponse(data, safe=False)
 
 
 def show_experience(request):
-    """Seperti halaman proyek, data diambil dari JSON lalu di-deserialize."""
-    json_response = get_experience_json(request)
-    experience_list = [
-        item.object
-        for item in serializers.deserialize("json", json_response.content.decode("utf-8"))
-    ]
-    context = {
-        "experience_list": experience_list,
-    }
-    return render(request, "experience.html", context)
-
+    # Sementara masih merender daftar di server. Tahap berikutnya halaman ini
+    # hanya mengirim kerangka dan datanya diambil lewat AJAX.
+    experience_list = Experience.objects.order_by(
+        F("ended_at").desc(nulls_first=True), "started_at"
+    )
+    return render(request, "experience.html", {"experience_list": experience_list})
 
 def get_projects_json(request):
     """Kirim data proyek sebagai JSON. ?title=... menyaring berdasarkan judul.

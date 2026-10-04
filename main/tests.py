@@ -203,6 +203,12 @@ class ExperienceCrudTest(TestCase):
         titles = [item["fields"]["title"] for item in json.loads(response.content)]
         self.assertEqual(titles, [self.ongoing.title, self.finished.title])
 
+    def test_experience_json_filters_by_title(self):
+        url = reverse("main:get_experience_json")
+        data = json.loads(self.client.get(url, {"title": "design"}).content)
+        self.assertEqual([item["fields"]["title"] for item in data], [self.finished.title])
+        self.assertEqual(json.loads(self.client.get(url, {"title": "zzz"}).content), [])
+        
     def test_experience_page_shows_deserialized_data(self):
         response = self.client.get(reverse("main:show_experience"))
         self.assertContains(response, self.ongoing.title)
@@ -499,10 +505,18 @@ class ExperienceStarTest(TestCase):
         self.client.get(self.star_url)
         self.assertEqual(self.experience.starred_by.count(), 0)
 
-    def test_experience_json_shows_usernames(self):
+    def test_experience_json_shows_usernames_and_star_state(self):
         self.experience.starred_by.add(self.member)
-        data = json.loads(self.client.get(reverse("main:get_experience_json")).content)
-        self.assertEqual(data[0]["fields"]["starred_by"], [["pengunjung"]])
+        url = reverse("main:get_experience_json")
+
+        anonymous = json.loads(self.client.get(url).content)[0]["fields"]
+        self.assertEqual(anonymous["star_count"], 1)
+        self.assertEqual(anonymous["starred_by_names"], "pengunjung")
+        self.assertFalse(anonymous["is_starred"])
+
+        self.client.force_login(self.member)
+        mine = json.loads(self.client.get(url).content)[0]["fields"]
+        self.assertTrue(mine["is_starred"])
 
 
 class AjaxCreateProjectTest(TestCase):
