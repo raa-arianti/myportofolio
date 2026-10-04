@@ -626,6 +626,29 @@ class AjaxCreateExperienceTest(TestCase):
         self.client.force_login(self.owner)
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
+    def test_html_tags_are_stripped_from_text_fields(self):
+        self.client.force_login(self.owner)
+        self.client.post(
+            self.url,
+            {
+                **self.valid_data,
+                "title": "MLOps <b>Mentee</b>",
+                "description": "Learned <i>to deploy</i> models.",
+            },
+        )
+        experience = Experience.objects.get()
+        self.assertEqual(experience.title, "MLOps Mentee")
+        self.assertEqual(experience.description, "Learned to deploy models.")
+
+    def test_xss_payload_as_title_is_rejected(self):
+        """Contoh serangan dari soal: setelah tag dibuang judulnya kosong, jadi ditolak."""
+        self.client.force_login(self.owner)
+        payload = """<img src="x" onerror="alert('XSS!')">"""
+        response = self.client.post(self.url, {**self.valid_data, "title": payload})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.json()["errors"])
+        self.assertFalse(Experience.objects.exists())
+
     def test_owner_page_ships_the_modal_form(self):
         self.client.force_login(self.owner)
         response = self.client.get(reverse("main:show_experience"))
