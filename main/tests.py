@@ -70,10 +70,11 @@ class ProjectPageTest(TestCase):
         self.assertTemplateUsed(response, "projects.html")
 
     def test_page_ships_the_grid_that_javascript_fills(self):
-        """Sejak Tutorial 05 kartunya dirakit browser, jadi halaman hanya berisi wadahnya."""
+        """Sejak Tutorial 05 kartunya dirakit browser, jadi halaman hanya berisi wadahnya.
+        Sejak Tutorial 07 datanya diambil dari API DRF, bukan get_projects_json."""
         response = self.client.get(self.url)
         self.assertContains(response, 'id="grid"')
-        self.assertContains(response, reverse("main:get_projects_json"))
+        self.assertContains(response, reverse("api:project-list"))
 
     def test_project_data_is_served_as_json(self):
         data = json.loads(self.client.get(reverse("main:get_projects_json")).content)

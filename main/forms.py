@@ -15,6 +15,19 @@ def strip_html(value, field_label):
     return cleaned
 
 
+def check_project_thumbnail(value):
+    """Tolak nama file yang tidak ada, supaya kartu tidak tampil dengan gambar rusak.
+    Dipakai ProjectForm dan ProjectSerializer supaya form dan API punya aturan yang sama."""
+    name = value.strip()
+    if "/" in name or "\\" in name:
+        raise forms.ValidationError("Enter only the file name, without a folder.")
+    if not finders.find(f"img/projects/{name}"):
+        raise forms.ValidationError(
+            f"No image named {name} was found in static/img/projects/."
+        )
+    return name
+
+
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
@@ -42,15 +55,7 @@ class ProjectForm(forms.ModelForm):
         return strip_html(self.cleaned_data["description"], "description")
 
     def clean_thumbnail(self):
-        """Tolak nama file yang tidak ada, supaya kartu tidak tampil dengan gambar rusak."""
-        name = self.cleaned_data["thumbnail"].strip()
-        if "/" in name or "\\" in name:
-            raise forms.ValidationError("Enter only the file name, without a folder.")
-        if not finders.find(f"img/projects/{name}"):
-            raise forms.ValidationError(
-                f"No image named {name} was found in static/img/projects/."
-            )
-        return name
+        return check_project_thumbnail(self.cleaned_data["thumbnail"])
 
 
 class ExperienceForm(forms.ModelForm):

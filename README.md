@@ -99,7 +99,12 @@ myportofolio/
 │   ├── urls.py              # named route aplikasi (namespace "main")
 │   ├── roles.py             # pemeriksaan peran Editor dan hak mengubah data
 │   ├── context_processors.py  # data yang dibutuhkan base.html di semua halaman
+│   ├── serializers.py       # ProjectSerializer (DRF): bentuk JSON dan validasi API
+│   ├── permissions.py       # permission class DRF untuk pemilik dan Editor
+│   ├── api_views.py         # API view DRF untuk Projects (daftar, detail, star)
+│   ├── api_urls.py          # route API di bawah /api/v1/ (namespace "api")
 │   ├── tests.py             # unit test
+│   ├── tests_api.py         # unit test API DRF
 │   └── migrations/          # riwayat perubahan skema basis data
 ├── templates/
 │   ├── base.html            # kerangka bersama: head, navbar, footer, pesan
@@ -246,6 +251,27 @@ error, kosong, atau grid kartu. Pencarian memakai debounce 300 milidetik dan `Ab
 Experience baru dikirim dari modal ke `/experience/add-ajax/`, yang memeriksa hak akses di
 dalam view dan menjawab dengan JSON berstatus 201, 400, atau 403; hasilnya dikabarkan lewat
 toast dan daftar diperbarui tanpa reload.
+
+### Tutorial 07, Django REST Framework
+Endpoint Projects dibangun ulang dengan Django REST Framework di bawah `/api/v1/projects/`:
+`GET` dan `POST` untuk daftar, `GET`/`PUT`/`PATCH`/`DELETE` untuk satu proyek, dan `POST .../star/`
+untuk memberi atau membatalkan star. `ProjectSerializer` menggantikan dictionary yang dulu dirakit
+manual, dan validasinya memanggil fungsi yang sama dengan `ProjectForm` (`strip_html` dan
+`check_project_thumbnail`), karena serializer tidak menjalankan `clean_<field>` milik form. Field
+hitungan (`star_count`, `is_starred`, `starred_by_names`) hanya bisa dibaca. Hak akses dipindah dari
+`if` di dalam view ke permission class: membaca untuk semua pengunjung, mengelola proyek hanya untuk
+superuser, dan star untuk akun yang sudah login. Disiapkan juga `IsPortfolioOwnerOrEditorOrReadOnly`
+untuk bagian Experience. Halaman Projects kini mengambil, menambah, menghapus, dan memberi star lewat
+API baru dengan satu fungsi `writeProject` yang mengirim JSON beserta header `X-CSRFToken`, tanpa
+pindah halaman. Ditambah 13 unit test API di `main/tests_api.py`, termasuk input yang salah, akun yang
+tidak berhak, method yang salah, dan pemeriksaan CSRF.
+
+**Yang saya pelajari:** urutan pemeriksaan DRF (autentikasi, permission, method, lalu serializer)
+menjelaskan kode status yang muncul. Contohnya, pengguna biasa yang mengubah proyek yang tidak ada
+mendapat 403, bukan 404, karena permission diperiksa sebelum objek dicari. Saya juga jadi sadar
+bahwa validasi di form tidak otomatis berlaku untuk API, jadi aturannya perlu ditaruh di satu
+fungsi yang dipakai keduanya. Untuk memastikan test permission benar-benar menguji sesuatu, saya
+sempat melonggarkan permission sementara, dan `test_guest_and_visitor_cannot_write` memang gagal.
 
 Yang dirapikan sekaligus supaya tidak ada kode kembar di dua halaman:
 
