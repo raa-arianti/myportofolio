@@ -45,6 +45,12 @@ dari `/api/experience/`, ada pencarian judul dengan debounce, dan experience bar
 dari modal tanpa meninggalkan halaman. Modal dan fungsi JavaScript-nya dipakai bersama oleh
 kedua halaman.
 
+Sejak Tutorial 07 (Projects) dan Tugas 6 (Experience), kedua halaman mengambil dan mengubah
+datanya lewat **API Django REST Framework** di `/api/v1/`. Halaman Experience bisa menampilkan,
+mencari, menyaring per kategori, menambah, mengubah (modal edit dengan `PATCH`), memberi star,
+dan menghapus experience tanpa reload. Hak akses keempat peran diperiksa di server oleh
+permission class, bukan hanya dengan menyembunyikan tombol.
+
 | Fitur | URL |
 |---|---|
 | Tambah proyek | `/projects/add/` (halaman) dan `/projects/add-ajax/` (dikirim lewat fetch) |
@@ -54,7 +60,25 @@ kedua halaman.
 | Beri atau batalkan star proyek | `/projects/<id>/star/` |
 | Beri atau batalkan star experience | `/experience/<id>/star/` |
 | Data JSON | `/api/projects/` dan `/api/experience/`, keduanya mendukung `?title=` |
+| API Projects (DRF) | `/api/v1/projects/`, `/api/v1/projects/<id>/`, `/api/v1/projects/<id>/star/` |
+| API Experience (DRF) | `/api/v1/experience/`, `/api/v1/experience/<id>/`, `/api/v1/experience/<id>/star/` |
 | Daftar akun, login, logout | `/register/`, `/login/`, `/logout/` |
+
+### API Experience (`/api/v1/experience/`)
+
+| Method | URL | Siapa yang boleh | Status berhasil |
+|---|---|---|---|
+| `GET` | `/api/v1/experience/?title=&category=` | semua orang | 200 |
+| `POST` | `/api/v1/experience/` | pemilik | 201 |
+| `GET` | `/api/v1/experience/<id>/` | semua orang | 200 |
+| `PUT`, `PATCH` | `/api/v1/experience/<id>/` | pemilik dan Editor | 200 |
+| `DELETE` | `/api/v1/experience/<id>/` | pemilik | 204 |
+| `POST` | `/api/v1/experience/<id>/star/` | semua akun yang sudah login | 200 |
+
+Input yang tidak valid dijawab 400 beserta pesan per field, tindakan yang tidak diizinkan 403,
+dan id yang tidak ada 404. `?category=` menerima kode kategori, misalnya `internship`.
+Field `star_count`, `is_starred`, `starred_by_names`, `category_label`, dan `is_ongoing`
+dihitung server dan bersifat read-only. Endpoint ini juga bisa dibuka lewat Browsable API DRF.
 
 ### Peran pengguna
 
@@ -99,24 +123,24 @@ myportofolio/
 │   ├── urls.py              # named route aplikasi (namespace "main")
 │   ├── roles.py             # pemeriksaan peran Editor dan hak mengubah data
 │   ├── context_processors.py  # data yang dibutuhkan base.html di semua halaman
-│   ├── serializers.py       # ProjectSerializer (DRF): bentuk JSON dan validasi API
+│   ├── serializers.py       # ProjectSerializer dan ExperienceSerializer (DRF)
 │   ├── permissions.py       # permission class DRF untuk pemilik dan Editor
-│   ├── api_views.py         # API view DRF untuk Projects (daftar, detail, star)
+│   ├── api_views.py         # API view DRF untuk Projects dan Experience
 │   ├── api_urls.py          # route API di bawah /api/v1/ (namespace "api")
 │   ├── tests.py             # unit test
-│   ├── tests_api.py         # unit test API DRF
+│   ├── tests_api.py         # unit test API DRF (Projects dan Experience)
 │   └── migrations/          # riwayat perubahan skema basis data
 ├── templates/
 │   ├── base.html            # kerangka bersama: head, navbar, footer, pesan
 │   ├── index.html           # halaman utama
-│   ├── experience.html      # daftar pengalaman: kerangka + skrip AJAX
+│   ├── experience.html      # daftar pengalaman: kerangka + skrip yang memakai API DRF
 │   ├── projects.html        # daftar proyek: kerangka + skrip AJAX
 │   ├── entry_form.html      # satu halaman form untuk tambah dan ubah data
 │   ├── register.html        # daftar akun
 │   ├── login.html           # login
 │   ├── 403.html             # halaman untuk pengunjung yang bukan pemilik
 │   └── components/
-│       ├── form_modal.html    # modal form tambah data, dipakai proyek dan experience
+│       ├── form_modal.html    # modal form tambah dan ubah data, dipakai proyek dan experience
 │       └── toast.html         # notifikasi singkat, disertakan base.html
 └── static/
     ├── css/style.css        # seluruh gaya halaman
@@ -265,6 +289,46 @@ Yang dirapikan sekaligus supaya tidak ada kode kembar di dua halaman:
 Total unit test menjadi 63. Cara mencoba perlindungan XSS: login sebagai pemilik, buka
 `/experience/`, lalu tambahkan experience berjudul `<img src="x" onerror="alert('XSS!')">`.
 Server menolaknya dengan status 400 dan pesannya muncul di toast, tanpa ada `alert`.
+
+### Tugas 6, API Django REST Framework untuk Experience
+Menerapkan pola Tutorial 07 pada bagian Experience.
+
+- **Serializer.** `ExperienceSerializer` di `main/serializers.py` memakai daftar `fields`
+  yang ditulis eksplisit. Info star (`star_count`, `is_starred`, `starred_by_names`) dihitung
+  dengan `SerializerMethodField`, jadi otomatis read-only, dan yang dikirim hanya username.
+  `validate_title` dan `validate_description` memanggil `strip_html` yang sama dengan
+  `clean_<field>` di `ExperienceForm`, jadi form dan API punya aturan yang sama persis.
+- **Permission.** Endpoint daftar dan detail memakai `IsPortfolioOwnerOrEditorOrReadOnly`:
+  semua orang boleh membaca, Editor hanya boleh `PUT` dan `PATCH`, dan hanya pemilik yang boleh
+  `POST` dan `DELETE`. Endpoint star memakai `IsAuthenticated`, dan akun pemberi star selalu
+  `request.user`.
+- **API view.** `experience_list`, `experience_detail`, dan `experience_star` di
+  `main/api_views.py` memakai `@api_view` dan `SessionAuthentication`. Pencarian dari Tugas 5
+  pindah ke `?title=`, ditambah `?category=` untuk menyaring per kategori.
+- **Halaman.** `/experience/` sekarang memakai API untuk semua aksinya. Tombol **Edit** membuka
+  modal yang sudah terisi data kartu lalu mengirim `PATCH`, jadi Editor tidak perlu pindah ke
+  halaman form lagi. Error 400 dan 403 dari API tampil di toast, setiap permintaan yang mengubah
+  data membawa header `X-CSRFToken`, dan semua teks tetap lewat `escapeHtml`.
+- **Test.** 19 test baru di `ExperienceAPITest` mencakup keempat peran (dengan pengecekan isi
+  database pada setiap penolakan), validasi, star, 404, field read-only, data akun yang tidak
+  boleh bocor, dan CSRF lewat `APIClient(enforce_csrf_checks=True)` dengan `.login()`.
+
+Fitur dan optimasi tambahan di luar checklist:
+
+- **Filter kategori** berupa dropdown di samping kotak pencarian, yang langsung menyaring tanpa
+  menekan tombol Cari dan bisa digabung dengan pencarian judul.
+- **Modal edit di halaman yang sama**, memakai ulang komponen `form_modal.html`. Datanya diisi
+  dari hasil `GET` terakhir, jadi membuka modal tidak butuh request tambahan.
+- **Jumlah query tetap.** Serializer membaca star dari `starred_by.all()` yang sudah di-prefetch,
+  bukan `.count()` atau `.filter()` yang selalu memicu query baru. Daftar experience berapa pun
+  jumlahnya selalu selesai dalam dua query, dan ini dikunci oleh test `assertNumQueries(2)`.
+
+Total unit test menjadi 95 dan `python manage.py test main` lulus semua.
+
+Cara mencoba peran di API: login sebagai Editor, buka `/experience/`, lalu ubah sebuah
+experience lewat tombol **Edit**. Untuk melihat penolakannya, buka
+`/api/v1/experience/<id>/` di Browsable API dan coba `DELETE`. Server menjawab 403 dan datanya
+tetap ada.
 
 ---
 
@@ -648,6 +712,101 @@ pun. Deserialization melakukan kebalikannya, mengubah string itu kembali menjadi
    langsung ke basis data uji: kartunya menampilkan tulisan `<img src="x" ...>` sebagai teks
    biasa, tidak ada elemen `<img>` yang terbentuk, dan `alert` tidak muncul. Cara kedua ini
    membuktikan bahwa `escapeHtml` tetap melindungi halaman walaupun lapisan server terlewati.
+
+### Tugas 6
+
+1. **REST** (Representational State Transfer) adalah gaya arsitektur untuk API web. Intinya,
+   data diperlakukan sebagai **resource** yang punya alamat sendiri (misalnya
+   `/api/v1/experience/<id>/`), lalu aksi terhadap resource itu dinyatakan lewat **method HTTP**
+   (`GET` membaca, `POST` membuat, `PUT`/`PATCH` mengubah, `DELETE` menghapus), dan hasilnya
+   dinyatakan lewat **status code** (201, 400, 403, 404, 204). Setiap request juga harus
+   lengkap sendiri (stateless), jadi server tidak perlu mengingat request sebelumnya.
+
+   Mengembalikan JSON saja belum cukup. Endpoint Tugas 5 saya (`/api/experience/` dan
+   `/experience/add-ajax/`) sudah membalas JSON, tetapi:
+
+   - alamatnya memuat kata kerja (`add-ajax`, `delete`), padahal di REST aksinya ditentukan
+     method, bukan URL;
+   - menghapus experience dilakukan lewat `POST` ke `/experience/<id>/delete/`, bukan
+     `DELETE` ke alamat resource-nya;
+   - format datanya berbeda antara daftar (`{"pk": ..., "fields": {...}}`) dan jawaban tambah
+     data (`{"message": ..., "pk": ...}`).
+
+   Di Tugas 6, satu alamat `/api/v1/experience/<id>/` melayani `GET`, `PUT`, `PATCH`, dan
+   `DELETE`, dan semua jawabannya memakai bentuk objek yang sama dari serializer.
+
+   **PUT** mengganti seluruh resource, jadi semua field wajib harus dikirim. Kalau ada yang
+   tidak dikirim, serializer menolaknya dengan 400 (ini diuji di
+   `test_put_requires_every_required_field`). **PATCH** hanya mengubah field yang dikirim,
+   sisanya tetap.
+
+   - Pakai **PUT** kalau klien memang punya representasi lengkapnya, misalnya form edit
+     yang menampilkan dan mengirim ulang semua field.
+   - Pakai **PATCH** untuk perubahan sebagian, misalnya hanya mengisi `ended_at` saat sebuah
+     pengalaman selesai, tanpa perlu mengirim ulang judul dan deskripsinya.
+
+   Modal edit di halaman Experience memakai PATCH. Walaupun saat ini modal mengirim semua field,
+   PATCH tidak akan gagal kalau suatu saat model mendapat field baru yang belum ada di modal.
+
+2. **Serializer** di DRF bekerja di dua arah:
+
+   - **Keluar (serialisasi):** mengubah objek model menjadi data yang bisa dijadikan JSON,
+     hanya dengan field yang disebut di `Meta.fields`.
+   - **Masuk (deserialisasi dan validasi):** membaca data dari request, mengecek tipe dan
+     pilihannya (misalnya `category` harus salah satu dari `EXPERIENCE_CHOICES` dan `thumbnail`
+     harus URL), menjalankan `validate_<field>`, lalu menyimpan lewat `serializer.save()`.
+
+   Dibandingkan merakit dictionary dengan `JsonResponse` seperti di `get_experience_json`:
+
+   - **Satu sumber bentuk data.** Dulu bentuk JSON ditulis manual di view, dan jawaban untuk
+     tambah data berbeda dengan jawaban untuk daftar. Sekarang daftar, detail, hasil
+     `POST`/`PATCH`, dan hasil star semuanya dari `ExperienceSerializer`.
+   - **Validasi tidak perlu ditulis ulang.** Aturan dari model (panjang judul, pilihan kategori,
+     format URL dan tanggal) langsung berlaku, ditambah `validate_title` dan
+     `validate_description`. Pesan errornya otomatis dalam bentuk `{"title": ["..."]}`
+     berstatus 400.
+   - **Field read-only jelas.** `star_count` dan field hitungan lainnya tidak bisa ditimpa dari
+     request, karena `SerializerMethodField` memang hanya untuk dibaca. Kalau merakit manual,
+     ini harus dijaga sendiri.
+   - **Aman dari kebocoran data.** Karena `fields` ditulis eksplisit, data akun seperti email
+     atau password hash tidak mungkin ikut keluar tanpa sengaja.
+   - **Browsable API.** DRF menampilkan endpoint yang bisa dicoba langsung di browser.
+
+3. **Autentikasi** menjawab "siapa kamu?", sedangkan **otorisasi** menjawab "kamu boleh
+   melakukan apa?". Di DRF:
+
+   - Autentikasi diatur `authentication_classes`. Saya memakai `SessionAuthentication`, yang
+     membaca cookie session dari login Django, lalu mengisi `request.user`.
+   - Otorisasi diatur `permission_classes`, yang dijalankan setelah `request.user` diketahui.
+     `IsPortfolioOwnerOrEditorOrReadOnly` memutuskan berdasarkan method dan peran, dan
+     `IsAuthenticated` di endpoint star cukup memastikan pengguna sudah login.
+
+   Menyembunyikan tombol di template hanya mengatur tampilan. Siapa pun bisa mengirim request
+   langsung tanpa memakai halaman, misalnya lewat DevTools, `curl`, atau Browsable API. Contoh
+   nyatanya: Editor tidak melihat tombol Delete, tetapi masih bisa menjalankan
+   `fetch("/api/v1/experience/<id>/", {method: "DELETE", ...})` dari console. Yang menolaknya
+   adalah permission class di server, dengan status 403, dan datanya tetap ada (ini diuji di
+   `test_editor_cannot_create_or_delete`). Jadi tombol yang disembunyikan hanya untuk kenyamanan
+   pengguna, sedangkan keamanannya tetap di server.
+
+4. `SessionAuthentication` mengenali pengguna dari **cookie session**, dan browser selalu
+   melampirkan cookie itu secara otomatis ke situs saya, termasuk ketika request-nya dipicu oleh
+   situs lain. Tanpa CSRF, halaman jahat bisa membuat browser korban yang sedang login mengirim
+   `DELETE` atau `POST` ke API saya, dan server akan menganggapnya sah. Token CSRF menutup celah
+   itu: nilainya harus dibaca dari cookie `csrftoken` lalu dikirim lewat header `X-CSRFToken`,
+   dan situs lain tidak bisa membaca cookie milik domain saya. Karena itu DRF menjalankan
+   pemeriksaan CSRF untuk setiap request yang memakai `SessionAuthentication` dengan method yang
+   mengubah data.
+
+   `force_authenticate` langsung menempelkan pengguna ke request dan **melewati
+   `SessionAuthentication` sepenuhnya**. Pemeriksaan CSRF ada di dalam
+   `SessionAuthentication.enforce_csrf`, jadi ikut terlewati. Test dengan `force_authenticate`
+   akan tetap lulus walaupun perlindungan CSRF rusak. Karena itu
+   `test_session_write_without_csrf_is_rejected` memakai `APIClient(enforce_csrf_checks=True)`
+   dan `.login()`, yaitu login sungguhan lewat session, lalu membuktikan `POST` dan `DELETE`
+   tanpa token ditolak 403 dan datanya tidak berubah. Pasangannya,
+   `test_session_write_with_csrf_succeeds`, membuktikan request yang membawa token dari halaman
+   Experience diterima.
 
 ---
 
@@ -1066,3 +1225,68 @@ Dengan pola ini, AI berfungsi sebagai tutor yang membantu saya memahami langkah 
 * **Peringatan editor tidak selalu berarti kode salah.** Angka peringatan pada VS Code sempat terlihat seperti error pada JavaScript di dalam template Django. Setelah diperiksa, masalahnya berasal dari editor yang tidak sepenuhnya memahami sintaks template Django. Karena itu, saya belajar membedakan antara peringatan editor dengan hasil sebenarnya dari unit test dan browser.
 
 Penggunaan AI pada Tugas 5 membantu saya bekerja lebih terarah, terutama ketika harus memahami beberapa konsep JavaScript sekaligus. Namun, AI tetap saya gunakan sebagai **pemandu dan pemeriksa**, sedangkan implementasi, pengujian, debugging, dan keputusan akhir saya kerjakan sendiri. Dengan cara ini saya tetap memahami perubahan yang masuk ke proyek dan dapat menjelaskan alasan di balik implementasinya.
+
+### Tugas 6
+
+#### Tools
+
+**Claude (model Opus 5.5) melalui Claude Code** di aplikasi desktop, 8 sampai 9 November 2026.
+
+#### Strategi prompting
+
+Berbeda dengan Tugas 5, kali ini AI tidak hanya menjadi pemandu. Saya memberikan PDF tugas,
+meminta AI membaca proyek saya lebih dulu, lalu meminta AI **langsung mengerjakan
+implementasinya** di branch `feat/individual-assignment-6`. Saya memberi batasan yang jelas:
+targetnya nilai 4 di setiap aspek rubrik, tulisan tidak memakai em dash, gaya bahasa mengikuti
+README saya, dan commit memakai nama saya dengan format conventional commits.
+
+AI mengikuti pola yang sudah ada dari Tutorial 07 (`ProjectSerializer`, `writeProject`,
+`projects.html`) supaya kode Experience konsisten dengan Projects. Setiap tahap dicommit
+terpisah: serializer, API view, integrasi halaman, test, lalu dokumentasi.
+
+#### Bagian yang dikerjakan AI
+
+* `ExperienceSerializer` beserta field star yang read-only dan validasi `strip_html`.
+* Pesan error pada `IsPortfolioOwnerOrEditorOrReadOnly` (class-nya sudah ada sejak Tutorial 07).
+* `experience_list`, `experience_detail`, dan `experience_star` di `main/api_views.py`, serta
+  route-nya di `main/api_urls.py`.
+* Skrip baru `templates/experience.html`: memakai API, modal edit dengan `PATCH`, filter
+  kategori, toast untuk error 400 dan 403, dan event delegation untuk star, edit, dan hapus.
+* 19 test di `ExperienceAPITest`, termasuk test jumlah query dan test CSRF dengan `.login()`.
+* Pengujian manual di browser memakai salinan database lokal dengan akun uji pemilik, Editor,
+  dan pengguna biasa.
+* Draf dokumentasi Tugas 6 dan jawaban pertanyaan reflektif.
+
+#### Bagian yang saya kerjakan sendiri
+
+* Menentukan target, batasan penulisan, dan nama branch.
+* Membaca ulang kode, menjalankan `python manage.py test main` dan `runserver`, lalu mencoba
+  halaman Experience dengan akun saya sendiri sebelum push.
+* Membaca dan memahami jawaban reflektif supaya bisa saya jelaskan dengan kata-kata sendiri.
+* Push dan pengumpulan tautan commit ke SCELE.
+
+#### Keterbatasan AI yang saya temukan
+
+* **Pola dari tutorial ikut disalin, termasuk kekurangannya.** `ProjectSerializer` dari
+  Tutorial 07 menghitung star dengan `obj.starred_by.count()`. Walaupun view sudah memakai
+  `prefetch_related`, `.count()` tetap mengirim satu query baru per proyek. Kalau pola itu
+  disalin mentah, halaman Experience juga akan kena masalah N+1. Di `ExperienceSerializer`
+  perhitungannya diganti memakai `starred_by.all()` yang membaca hasil prefetch, lalu dikunci
+  dengan `assertNumQueries(2)` supaya tidak mundur lagi.
+* **Format tanggal di form dan di API berbeda.** `<input type="date">` mengirim `2025-11-30`,
+  sedangkan `ended_at` adalah `DateTimeField` yang di DRF butuh tanggal sekaligus jam. Hal ini
+  tidak terlihat dari membaca kode saja, dan baru ketahuan saat dicoba. Solusinya,
+  `formToPayload` menambahkan jam `T00:00:00`, dan isian kosong dikirim sebagai `null`.
+* **Test lama ikut terdampak.** Satu test Tugas 5 masih mengecek alamat `/api/experience/` di
+  halaman, padahal halaman sekarang memakai `/api/v1/experience/`. Ini baru terlihat setelah
+  seluruh test dijalankan, bukan hanya test yang baru ditulis. Jadi semua test tetap harus
+  dijalankan setiap kali selesai satu tahap.
+* **Lulus test tidak sama dengan halaman berjalan benar.** Test API tidak menjalankan
+  JavaScript, jadi modal edit, filter kategori, dan toast tetap harus dicoba di browser dengan
+  akun pemilik dan akun Editor.
+
+#### Perbaikan manual dan catatan
+
+* Endpoint lama `/api/experience/` dan `/experience/add-ajax/` sengaja tidak dihapus supaya test
+  Tugas 3 sampai 5 tetap berlaku. Halaman Experience sudah tidak memakainya lagi.
+* Setelah perubahan, saya tetap memeriksa diff setiap commit sebelum push.
