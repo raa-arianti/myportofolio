@@ -75,12 +75,16 @@ def get_experience_json(request):
 
 
 def show_experience(request):
-    """Sama seperti show_projects: halaman ini hanya mengirim kerangkanya, lalu
-    browser mengambil daftar experience lewat AJAX ke get_experience_json.
-    ExperienceForm kosong dikirim untuk mengisi modal tambah experience."""
+    """Halaman ini hanya mengirim kerangkanya. Sejak Tugas 6 browser mengambil, mencari,
+    menambah, mengubah, memberi star, dan menghapus experience lewat /api/v1/experience/.
+
+    Dua ExperienceForm kosong dikirim: satu untuk modal tambah, satu untuk modal ubah.
+    auto_id dibedakan supaya id elemen kedua modal tidak bentrok di satu halaman."""
     context = {
         "title_query": request.GET.get("title", "").strip(),
         "form": ExperienceForm(),
+        "edit_form": ExperienceForm(auto_id="edit_%s"),
+        "categories": Experience.EXPERIENCE_CHOICES,
     }
     return render(request, "experience.html", context)
 

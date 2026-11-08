@@ -33,12 +33,12 @@ class MainTest(TestCase):
         self.assertTrue(self.experience.is_ongoing)
 
     def test_experience_page_ships_the_grid_that_javascript_fills(self):
-        """Sejak Tugas 5 kartunya dirakit browser, jadi halaman hanya berisi wadahnya."""
+        """Sejak Tugas 5 kartunya dirakit browser, dan sejak Tugas 6 datanya dari API DRF."""
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience.html")
         self.assertContains(response, 'id="grid"')
-        self.assertContains(response, reverse("main:get_experience_json"))
+        self.assertContains(response, reverse("api:experience-list"))
         self.assertNotContains(response, self.experience.description)
 
     def test_empty_experience_page(self):

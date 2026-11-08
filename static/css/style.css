@@ -669,7 +669,14 @@ html {
 
 /* Kotak pencarian yang sama, tetapi rata kiri mengikuti judul halaman Experience. */
 .experience-search {
+    max-width: 44rem;
     margin: 0 0 1.75rem;
+}
+
+/* Dropdown kategori di samping kotak pencarian, lebarnya mengikuti isi. */
+.experience-filter {
+    flex: 0 0 auto;
+    cursor: pointer;
 }
 
 .flash-messages {
