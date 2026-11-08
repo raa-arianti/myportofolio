@@ -15,6 +15,8 @@ class IsPortfolioOwnerOrEditorOrReadOnly(BasePermission):
     tetapi menambah dan menghapus tetap hanya untuk pemilik. Memakai is_editor dari
     main/roles.py supaya aturannya sama dengan halaman HTML."""
 
+    message = "Only the portfolio owner can add or delete. Editors may only edit."
+
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
