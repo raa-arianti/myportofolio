@@ -1226,67 +1226,63 @@ Dengan pola ini, AI berfungsi sebagai tutor yang membantu saya memahami langkah 
 
 Penggunaan AI pada Tugas 5 membantu saya bekerja lebih terarah, terutama ketika harus memahami beberapa konsep JavaScript sekaligus. Namun, AI tetap saya gunakan sebagai **pemandu dan pemeriksa**, sedangkan implementasi, pengujian, debugging, dan keputusan akhir saya kerjakan sendiri. Dengan cara ini saya tetap memahami perubahan yang masuk ke proyek dan dapat menjelaskan alasan di balik implementasinya.
 
-### Tugas 6
+### **Tugas 6**
 
-#### Tools
+#### **Tools**
 
 **Claude (model Opus 5.5) melalui Claude Code** di aplikasi desktop, 8 sampai 9 November 2026.
 
-#### Strategi prompting
+#### **Strategi prompting**
 
-Berbeda dengan Tugas 5, kali ini AI tidak hanya menjadi pemandu. Saya memberikan PDF tugas,
-meminta AI membaca proyek saya lebih dulu, lalu meminta AI **langsung mengerjakan
-implementasinya** di branch `feat/individual-assignment-6`. Saya memberi batasan yang jelas:
-targetnya nilai 4 di setiap aspek rubrik, tulisan tidak memakai em dash, gaya bahasa mengikuti
-README saya, dan commit memakai nama saya dengan format conventional commits.
+Untuk Tugas 6, saya menggunakan AI sebagai **pemandu implementasi (coding assistant) dan technical reviewer**, bukan sebagai pihak yang mengerjakan keseluruhan implementasi secara langsung.
 
-AI mengikuti pola yang sudah ada dari Tutorial 07 (`ProjectSerializer`, `writeProject`,
-`projects.html`) supaya kode Experience konsisten dengan Projects. Setiap tahap dicommit
-terpisah: serializer, API view, integrasi halaman, test, lalu dokumentasi.
+Sebelum mulai, saya memberikan PDF instruksi tugas dan meminta AI mempelajari struktur proyek yang sudah ada, khususnya implementasi Django REST Framework pada bagian Projects dari Tutorial 07. Saya ingin memahami bagaimana pola implementasi tersebut dapat diterapkan pada bagian Experience tanpa mengubah struktur maupun fungsionalitas yang sudah berjalan.
 
-#### Bagian yang dikerjakan AI
+Saya membagi pengerjaan menjadi beberapa tahap, yaitu serializer, permission, API views, integrasi API dengan halaman Experience, pengujian, dan dokumentasi.
 
-* `ExperienceSerializer` beserta field star yang read-only dan validasi `strip_html`.
-* Pesan error pada `IsPortfolioOwnerOrEditorOrReadOnly` (class-nya sudah ada sejak Tutorial 07).
-* `experience_list`, `experience_detail`, dan `experience_star` di `main/api_views.py`, serta
-  route-nya di `main/api_urls.py`.
-* Skrip baru `templates/experience.html`: memakai API, modal edit dengan `PATCH`, filter
-  kategori, toast untuk error 400 dan 403, dan event delegation untuk star, edit, dan hapus.
-* 19 test di `ExperienceAPITest`, termasuk test jumlah query dan test CSRF dengan `.login()`.
-* Pengujian manual di browser memakai salinan database lokal dengan akun uji pemilik, Editor,
-  dan pengguna biasa.
-* Draf dokumentasi Tugas 6 dan jawaban pertanyaan reflektif.
+Pada setiap tahap, AI terlebih dahulu membantu mengidentifikasi bagian kode yang perlu diperhatikan, menjelaskan konsep yang berkaitan, serta memberikan starting point berupa gambaran implementasi, contoh kode, dan petunjuk file yang perlu diubah. Setelah memahami arahan tersebut, **saya sendiri yang menentukan implementasi, menulis dan mengubah kode, menjalankan pengujian, serta melakukan commit**.
 
-#### Bagian yang saya kerjakan sendiri
+Saya juga meminta AI memeriksa perubahan yang sudah saya kerjakan. Pemeriksaan dilakukan dengan meninjau diff, membaca struktur kode, dan menganalisis hasil unit test. Apabila terdapat kesalahan atau test yang gagal, AI membantu menjelaskan kemungkinan penyebabnya dan memberikan alternatif perbaikan. Saya kemudian memeriksa kembali penjelasan tersebut, menerapkan perbaikannya sendiri, dan menjalankan pengujian ulang untuk memastikan masalah sudah terselesaikan.
 
-* Menentukan target, batasan penulisan, dan nama branch.
-* Membaca ulang kode, menjalankan `python manage.py test main` dan `runserver`, lalu mencoba
-  halaman Experience dengan akun saya sendiri sebelum push.
-* Membaca dan memahami jawaban reflektif supaya bisa saya jelaskan dengan kata-kata sendiri.
-* Push dan pengumpulan tautan commit ke SCELE.
+Dengan pendekatan ini, AI membantu saya menentukan arah pengerjaan dan memahami konsep yang belum saya kuasai, sementara proses implementasi, debugging, pengujian, dan pengambilan keputusan tetap saya lakukan sendiri.
 
-#### Keterbatasan AI yang saya temukan
+#### **Bagian yang dibantu AI**
 
-* **Pola dari tutorial ikut disalin, termasuk kekurangannya.** `ProjectSerializer` dari
-  Tutorial 07 menghitung star dengan `obj.starred_by.count()`. Walaupun view sudah memakai
-  `prefetch_related`, `.count()` tetap mengirim satu query baru per proyek. Kalau pola itu
-  disalin mentah, halaman Experience juga akan kena masalah N+1. Di `ExperienceSerializer`
-  perhitungannya diganti memakai `starred_by.all()` yang membaca hasil prefetch, lalu dikunci
-  dengan `assertNumQueries(2)` supaya tidak mundur lagi.
-* **Format tanggal di form dan di API berbeda.** `<input type="date">` mengirim `2025-11-30`,
-  sedangkan `ended_at` adalah `DateTimeField` yang di DRF butuh tanggal sekaligus jam. Hal ini
-  tidak terlihat dari membaca kode saja, dan baru ketahuan saat dicoba. Solusinya,
-  `formToPayload` menambahkan jam `T00:00:00`, dan isian kosong dikirim sebagai `null`.
-* **Test lama ikut terdampak.** Satu test Tugas 5 masih mengecek alamat `/api/experience/` di
-  halaman, padahal halaman sekarang memakai `/api/v1/experience/`. Ini baru terlihat setelah
-  seluruh test dijalankan, bukan hanya test yang baru ditulis. Jadi semua test tetap harus
-  dijalankan setiap kali selesai satu tahap.
-* **Lulus test tidak sama dengan halaman berjalan benar.** Test API tidak menjalankan
-  JavaScript, jadi modal edit, filter kategori, dan toast tetap harus dicoba di browser dengan
-  akun pemilik dan akun Editor.
+* Membaca dan menganalisis struktur proyek serta implementasi DRF pada bagian Projects sebagai referensi sebelum memulai Tugas 6.
+* Membantu menyusun urutan pengerjaan dan membagi implementasi menjadi beberapa tahap agar perubahan lebih terstruktur.
+* Menjelaskan konsep Django REST Framework yang digunakan, terutama **Serializer, ModelSerializer, APIView, HTTP methods, permission classes, SessionAuthentication, dan CSRF protection**.
+* Memberikan starting point dan contoh implementasi untuk `ExperienceSerializer`, termasuk penggunaan `SerializerMethodField`, validasi field, dan pengaturan read-only.
+* Menjelaskan cara menerapkan permission berdasarkan peran pengguna, khususnya perbedaan hak akses antara pengunjung, pengguna terdaftar, Editor, dan pemilik portofolio.
+* Memberikan arahan mengenai implementasi endpoint `experience_list`, `experience_detail`, dan `experience_star` pada `main/api_views.py`.
+* Membantu menjelaskan integrasi API dengan JavaScript pada `experience.html`, termasuk penggunaan `GET`, `POST`, `PATCH`, dan `DELETE`.
+* Memeriksa diff dan struktur kode setelah setiap tahap pengerjaan untuk menemukan kesalahan implementasi, bagian yang belum lengkap, atau kemungkinan inkonsistensi dengan bagian Projects.
+* Membantu menganalisis kegagalan unit test, menjelaskan penyebab error, dan memberikan alternatif perbaikan yang kemudian saya terapkan sendiri.
+* Memberikan masukan mengenai optimasi query, khususnya penggunaan `prefetch_related` dan cara menghindari masalah N+1 query pada pengambilan informasi star.
+* Membantu meninjau hasil pengujian, dokumentasi, dan jawaban pertanyaan reflektif berdasarkan implementasi yang telah saya kerjakan.
 
-#### Perbaikan manual dan catatan
+#### **Bagian yang saya kerjakan sendiri**
 
-* Endpoint lama `/api/experience/` dan `/experience/add-ajax/` sengaja tidak dihapus supaya test
-  Tugas 3 sampai 5 tetap berlaku. Halaman Experience sudah tidak memakainya lagi.
-* Setelah perubahan, saya tetap memeriksa diff setiap commit sebelum push.
+* Membaca dan memahami instruksi Tugas 6 serta menentukan target implementasi berdasarkan rubrik penilaian.
+* Mempelajari implementasi Projects dari Tutorial 07 sebagai referensi untuk mengembangkan fitur Experience.
+* Menentukan pembagian tahap dan urutan pengerjaan agar perubahan tidak mengganggu fungsionalitas yang sudah ada.
+* Menulis dan mengimplementasikan sendiri perubahan kode pada `main/serializers.py`, `main/api_views.py`, `main/api_urls.py`, serta `templates/experience.html`.
+* Menyesuaikan implementasi serializer, permission, endpoint API, dan integrasi JavaScript berdasarkan kebutuhan tugas.
+* Menjalankan server dan unit test untuk memeriksa setiap perubahan yang telah dibuat.
+* Menganalisis error yang muncul selama pengerjaan, memeriksa kode yang bermasalah, dan menerapkan perbaikannya sendiri dengan menggunakan penjelasan AI sebagai referensi.
+* Memeriksa hasil implementasi melalui browser, termasuk mencoba fungsi pencarian, filter kategori, penambahan, pengubahan, penghapusan, dan pemberian star pada Experience.
+* Memeriksa hak akses setiap peran untuk memastikan endpoint menolak tindakan yang tidak diizinkan.
+* Menjalankan pengujian CSRF dan memeriksa hasilnya untuk memastikan perlindungan request yang mengubah data berjalan sesuai harapan.
+* Melakukan commit, memeriksa kembali perubahan akhir, menjalankan push, dan mengumpulkan tautan commit ke SCELE.
+* Membaca dan memahami kembali seluruh implementasi serta jawaban reflektif agar dapat menjelaskan alasan di balik setiap keputusan teknis.
+
+#### **Keterbatasan AI yang saya temukan**
+
+* **Mengikuti pola tutorial tidak selalu berarti implementasinya sudah optimal.** Saat membandingkan implementasi Projects dari Tutorial 07 dengan kebutuhan Experience, saya menemukan bahwa pola penghitungan star menggunakan `obj.starred_by.count()` berpotensi menghasilkan query tambahan untuk setiap objek. Meskipun view sudah menggunakan `prefetch_related`, pemanggilan `.count()` tetap dapat memicu query baru. Hal ini menunjukkan bahwa contoh implementasi dari tutorial maupun rekomendasi AI tetap perlu dianalisis kembali. Saya perlu memahami bagaimana ORM Django bekerja sebelum memutuskan apakah suatu pola layak digunakan kembali.
+
+* **AI dapat memberikan petunjuk yang kurang tepat ketika struktur kode berubah.** Selama proses implementasi, petunjuk yang hanya mengandalkan nomor baris terkadang tidak lagi sesuai setelah saya melakukan perubahan pada bagian lain. Karena itu, saya belajar untuk lebih mengandalkan nama fungsi, nama variabel, dan potongan kode tertentu ketika mencari lokasi perubahan.
+
+* **Solusi yang secara teknis bekerja belum tentu sesuai dengan kebutuhan aplikasi.** AI terkadang menawarkan pendekatan alternatif yang dapat menyelesaikan suatu masalah, tetapi belum tentu konsisten dengan struktur atau perilaku aplikasi yang sudah ada. Saya tetap perlu membandingkan setiap usulan dengan kebutuhan tugas dan implementasi sebelumnya sebelum menerapkannya.
+
+* **Hasil unit test yang berhasil belum menjamin seluruh interaksi pengguna berjalan sempurna.** Unit test dapat memverifikasi banyak aspek seperti status response, validasi, permission, dan perubahan database. Namun, interaksi pada browser tetap perlu diperiksa secara terpisah untuk memastikan modal, toast, filter, dan pembaruan daftar berjalan sebagaimana mestinya.
+
+Pengalaman mengerjakan Tugas 6 membuat saya semakin memahami bahwa AI dapat mempercepat proses belajar dan membantu menemukan kesalahan, tetapi tidak dapat menggantikan pemahaman terhadap kode yang sedang dikembangkan. Saya tetap perlu membaca implementasi, memahami alur request dan response, memeriksa hasil pengujian, serta memastikan setiap perubahan sesuai dengan kebutuhan aplikasi.
